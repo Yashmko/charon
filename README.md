@@ -1,4 +1,4 @@
-Charon — semantic IDOR & authorization hunter
+# Charon — semantic IDOR & authorization hunter
 
 stop guessing IDs. start reasoning about ownership.
 >Charon is evidence-driven: LLMs assist with semantic inference and explanation, but every security finding is backed by deterministic replay and observable behavior.
