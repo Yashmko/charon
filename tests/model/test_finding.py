@@ -33,6 +33,7 @@ def test_finding_create_requires_evidence_object(evidence: Evidence) -> None:
         subject=_subject(),
         evidence=[evidence],
     )
+    assert finding.evidence == (evidence,)
     assert finding.evidence_ids == (evidence.evidence_id,)
     assert finding.finding_id.startswith("sha256:")
 
@@ -48,15 +49,40 @@ def test_finding_create_rejects_empty_evidence() -> None:
         )
 
 
-def test_finding_direct_construction_rejects_empty_evidence_ids() -> None:
+def test_finding_direct_construction_rejects_empty_evidence() -> None:
     with pytest.raises(InvalidFindingError):
         Finding(
             rule_id="r",
             owasp_class=OwaspClass.API1_BOLA,
             severity=Severity.HIGH,
             subject=_subject(),
-            evidence_ids=(),
+            evidence=(),
         )
+
+
+def test_finding_cannot_be_built_from_fabricated_id_strings() -> None:
+    """A finding must be backed by real Evidence, not a hand-crafted hash."""
+    with pytest.raises(InvalidFindingError):
+        Finding(
+            rule_id="r",
+            owasp_class=OwaspClass.API1_BOLA,
+            severity=Severity.HIGH,
+            subject=_subject(),
+            evidence=("sha256:deadbeef",),  # type: ignore[arg-type]
+        )
+
+
+def test_finding_direct_construction_requires_real_evidence(
+    evidence: Evidence,
+) -> None:
+    finding = Finding(
+        rule_id="r",
+        owasp_class=OwaspClass.API1_BOLA,
+        severity=Severity.HIGH,
+        subject=_subject(),
+        evidence=(evidence,),
+    )
+    assert finding.evidence_ids == (evidence.evidence_id,)
 
 
 def test_finding_rejects_inferred_subject_field(evidence: Evidence) -> None:

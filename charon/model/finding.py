@@ -1,19 +1,16 @@
 """``Finding``: a detected authorization issue, backed by evidence.
 
 The central invariant of the model lives here: **a ``Finding`` cannot be
-constructed without at least one ``Evidence`` reference**, enforced at the
+constructed without at least one real ``Evidence`` object**, enforced at the
 type level rather than by convention (``docs/data-model.md``).
 
-Two defenses combine to make an invalid finding impossible-to-very-hard to
-build:
+The ``Finding`` stores a non-empty tuple of concrete
+:class:`~charon.model.evidence.Evidence` objects. There is no constructor
+path that accepts bare evidence-id strings, so a caller cannot mint a finding
+from a fabricated, unbacked id. ``evidence_ids`` is exposed as a derived,
+read-only view of the attached evidence for traceability and addressing.
 
-#. The dataclass rejects an empty ``evidence_ids`` tuple in
-   ``__post_init__``.
-#. The :meth:`Finding.create` constructor requires real
-   :class:`~charon.model.evidence.Evidence` *objects* (not bare strings),
-   so a caller cannot fabricate a plausible-looking evidence id by hand.
-
-Finding core fields may only carry deterministic provenance
+Finding core (subject) fields may only carry deterministic provenance
 (``Observed`` / ``Replayed`` / ``Derived``); an ``Inferred`` value is
 rejected, because LLM output is advisory and never proof.
 """
@@ -66,11 +63,14 @@ def _require_deterministic(name: str, tagged: Provenanced[Any]) -> None:
 class Finding:
     """A detected authorization issue produced solely by ``detect``.
 
-    Holds no inline prose-as-proof: proof lives in referenced ``Evidence``.
-    The ``evidence_ids`` tuple is guaranteed non-empty by construction.
+    Holds no inline prose-as-proof: proof lives in the attached ``Evidence``
+    objects. The ``evidence`` tuple is guaranteed to be non-empty and to
+    contain only real :class:`Evidence` instances by construction; there is
+    no way to build a ``Finding`` from a fabricated id string.
 
-    Prefer :meth:`create`, which requires real ``Evidence`` objects and so
-    makes it impossible to mint a finding from a fabricated id string.
+    Use :meth:`create` for an ergonomic, keyword-only constructor. Direct
+    construction is supported too, but it still requires real ``Evidence``
+    objects via the ``evidence`` field.
     """
 
     rule_id: str
@@ -79,16 +79,25 @@ class Finding:
     #: Identifiers (path templates, fields, etc.) the finding concerns, each
     #: provenance-tagged. Must all be deterministic.
     subject: Mapping[str, Provenanced[str]]
-    #: Content addresses of the supporting evidence. MUST be non-empty.
-    evidence_ids: tuple[ContentAddress, ...]
+    #: The concrete evidence backing this finding. MUST be a non-empty tuple
+    #: of real :class:`Evidence` objects.
+    evidence: tuple[Evidence, ...]
     finding_id: ContentAddress = field(default="", compare=False)
 
     def __post_init__(self) -> None:
-        if not self.evidence_ids:
+        evidence = tuple(self.evidence)
+        if not evidence:
             raise InvalidFindingError(
-                "A Finding requires at least one Evidence reference; "
+                "A Finding requires at least one Evidence object; "
                 "evidence-backed findings are an architectural invariant."
             )
+        for item in evidence:
+            if not isinstance(item, Evidence):
+                raise InvalidFindingError(
+                    "A Finding must be backed by real Evidence objects; got "
+                    f"{type(item).__name__}. Evidence cannot be fabricated "
+                    "from an id string."
+                )
         for key, tagged in self.subject.items():
             if not isinstance(tagged, Provenanced):
                 raise ProvenanceError(
@@ -96,11 +105,19 @@ class Finding:
                     f"got {type(tagged).__name__}."
                 )
             _require_deterministic(key, tagged)
-        # Freeze the subject mapping and normalize evidence id ordering so the
-        # finding id is a deterministic function of content.
+        # Deduplicate evidence by content address while preserving a stable,
+        # sorted order so the finding id is a deterministic function of
+        # content.
+        deduped = {e.evidence_id: e for e in evidence}
+        ordered = tuple(deduped[k] for k in sorted(deduped))
+        object.__setattr__(self, "evidence", ordered)
         object.__setattr__(self, "subject", dict(self.subject))
-        object.__setattr__(self, "evidence_ids", tuple(sorted(set(self.evidence_ids))))
         object.__setattr__(self, "finding_id", self._compute_id())
+
+    @property
+    def evidence_ids(self) -> tuple[ContentAddress, ...]:
+        """Content addresses of the backing evidence (read-only, derived)."""
+        return tuple(e.evidence_id for e in self.evidence)
 
     def _compute_id(self) -> ContentAddress:
         return content_address(self.to_canonical())
@@ -117,23 +134,18 @@ class Finding:
     ) -> "Finding":
         """Construct a finding from concrete :class:`Evidence` objects.
 
-        This is the preferred constructor. Requiring real evidence objects
-        (rather than id strings) makes it impossible to create a finding
-        without genuinely-assembled evidence.
+        Requiring real evidence objects (rather than id strings) makes it
+        impossible to create a finding without genuinely-assembled evidence.
 
-        :raises InvalidFindingError: if ``evidence`` yields no items.
+        :raises InvalidFindingError: if ``evidence`` yields no items, or any
+            item is not a real :class:`Evidence` instance.
         """
-        evidence_ids = tuple(e.evidence_id for e in evidence)
-        if not evidence_ids:
-            raise InvalidFindingError(
-                "Finding.create requires at least one Evidence object."
-            )
         return cls(
             rule_id=rule_id,
             owasp_class=owasp_class,
             severity=severity,
             subject=subject,
-            evidence_ids=evidence_ids,
+            evidence=tuple(evidence),
         )
 
     def to_canonical(self) -> dict[str, Any]:

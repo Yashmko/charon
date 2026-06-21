@@ -30,7 +30,7 @@ def captured_exchange() -> CapturedExchange:
         url="https://example.test/api/invoices/8821",
         request=HttpMessage(headers=(("Authorization", "Bearer a"),)),
         status_code=200,
-        response=HttpMessage(body='{"id":8821,"owner_id":"userA"}'),
+        response=HttpMessage(body=b'{"id":8821,"owner_id":"userA"}'),
         resource_refs=(("path", "id", "8821"),),
     )
 
@@ -54,7 +54,7 @@ def replay_result(
         replay_request_id=replay_request.request_id,
         baseline_exchange_id=captured_exchange.exchange_id,
         status_code=200,
-        response=HttpMessage(body='{"id":8821,"owner_id":"userA"}'),
+        response=HttpMessage(body=b'{"id":8821,"owner_id":"userA"}'),
     )
 
 

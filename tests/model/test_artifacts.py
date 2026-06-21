@@ -37,11 +37,38 @@ def test_captured_exchange_id_is_stable_across_equivalent_records() -> None:
             url="https://example.test/x",
             request=HttpMessage(headers=((header_case, "v"),)),
             status_code=200,
-            response=HttpMessage(body="{}"),
+            response=HttpMessage(body=b"{}"),
         )
 
     # Header-name casing must not change the content address.
     assert build("Authorization").exchange_id == build("authorization").exchange_id
+
+
+def test_http_message_requires_bytes_body() -> None:
+    with pytest.raises(TypeError):
+        HttpMessage(body="not-bytes")  # type: ignore[arg-type]
+
+
+def test_http_message_preserves_binary_body_deterministically() -> None:
+    # Bytes that are not valid UTF-8 must round-trip and address stably.
+    raw = b"\x89PNG\r\n\x1a\n\xff\xfe\x00\x01"
+    first = HttpMessage(body=raw)
+    second = HttpMessage(body=raw)
+    assert first.body == raw
+    assert first.to_canonical() == second.to_canonical()
+
+    exchange_kwargs = dict(
+        account_label="userA",
+        method="GET",
+        url="https://example.test/img",
+        request=HttpMessage(),
+        status_code=200,
+    )
+    a = CapturedExchange(response=HttpMessage(body=raw), **exchange_kwargs)
+    b = CapturedExchange(response=HttpMessage(body=raw), **exchange_kwargs)
+    c = CapturedExchange(response=HttpMessage(body=b"different"), **exchange_kwargs)
+    assert a.exchange_id == b.exchange_id
+    assert a.exchange_id != c.exchange_id
 
 
 def test_replay_result_records_nondeterminism(replay_result: ReplayResult) -> None:

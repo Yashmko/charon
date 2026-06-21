@@ -7,6 +7,7 @@ traffic. Its provenance is therefore always ``Observed``.
 
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -31,24 +32,49 @@ def _normalize_headers(
 
 @dataclass(frozen=True, slots=True)
 class HttpMessage:
-    """An immutable HTTP message (request or response) body + headers.
+    """An immutable HTTP message (request or response): headers + raw body.
 
-    ``body`` is stored as text exactly as captured. Parsing/normalization of
-    bodies is the responsibility of the (not-yet-implemented) ``compare``
-    module; the model keeps the raw observation.
+    ``body`` is stored as raw :class:`bytes` exactly as captured, so binary
+    payloads (gzip, images, protobuf, multipart, ...) survive without lossy
+    text decoding. Parsing/normalization of bodies is the responsibility of
+    the (not-yet-implemented) ``compare`` module; the model keeps the raw
+    observed bytes.
+
+    Determinism is preserved by base64-encoding the body in the canonical
+    content view, so content addresses remain stable and reproducible across
+    runs and platforms.
     """
 
     headers: tuple[tuple[str, str], ...] = ()
-    body: str | None = None
+    body: bytes | None = None
 
     def __post_init__(self) -> None:
+        if self.body is not None and not isinstance(self.body, (bytes, bytearray)):
+            raise TypeError(
+                "HttpMessage.body must be bytes or None; "
+                f"got {type(self.body).__name__}. Encode text explicitly "
+                "(e.g. value.encode('utf-8'))."
+            )
+        # Normalize bytearray -> immutable bytes for hashability/immutability.
+        if isinstance(self.body, bytearray):
+            object.__setattr__(self, "body", bytes(self.body))
         object.__setattr__(self, "headers", _normalize_headers(self.headers))
 
     def to_canonical(self) -> dict[str, Any]:
-        """Return a deterministic, JSON-serializable view of this message."""
+        """Return a deterministic, JSON-serializable view of this message.
+
+        The raw body bytes are base64-encoded (ASCII) so the view is
+        JSON-serializable while remaining a lossless, deterministic function
+        of the observed bytes.
+        """
+        body_b64: str | None
+        if self.body is None:
+            body_b64 = None
+        else:
+            body_b64 = base64.b64encode(self.body).decode("ascii")
         return {
             "headers": [list(pair) for pair in self.headers],
-            "body": self.body,
+            "body_b64": body_b64,
         }
 
 
