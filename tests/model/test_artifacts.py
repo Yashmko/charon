@@ -57,16 +57,19 @@ def test_http_message_preserves_binary_body_deterministically() -> None:
     assert first.body == raw
     assert first.to_canonical() == second.to_canonical()
 
-    exchange_kwargs = dict(
-        account_label="userA",
-        method="GET",
-        url="https://example.test/img",
-        request=HttpMessage(),
-        status_code=200,
-    )
-    a = CapturedExchange(response=HttpMessage(body=raw), **exchange_kwargs)
-    b = CapturedExchange(response=HttpMessage(body=raw), **exchange_kwargs)
-    c = CapturedExchange(response=HttpMessage(body=b"different"), **exchange_kwargs)
+    def build(body: bytes) -> CapturedExchange:
+        return CapturedExchange(
+            account_label="userA",
+            method="GET",
+            url="https://example.test/img",
+            request=HttpMessage(),
+            status_code=200,
+            response=HttpMessage(body=body),
+        )
+
+    a = build(raw)
+    b = build(raw)
+    c = build(b"different")
     assert a.exchange_id == b.exchange_id
     assert a.exchange_id != c.exchange_id
 
@@ -105,9 +108,15 @@ def test_evidence_requires_comparison_and_exchange(
     captured_exchange: CapturedExchange, comparison: Comparison
 ) -> None:
     with pytest.raises(ModelError):
-        Evidence(comparison_ref="", captured_exchange_refs=(captured_exchange.exchange_id,))
+        Evidence(
+            comparison_ref="",
+            captured_exchange_refs=(captured_exchange.exchange_id,),
+        )
     with pytest.raises(ModelError):
-        Evidence(comparison_ref=comparison.comparison_id, captured_exchange_refs=())
+        Evidence(
+            comparison_ref=comparison.comparison_id,
+            captured_exchange_refs=(),
+        )
 
 
 def test_evidence_is_derived(evidence: Evidence) -> None:

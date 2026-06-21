@@ -109,14 +109,21 @@ def test_finding_is_immutable(evidence: Evidence) -> None:
 
 
 def test_finding_id_is_deterministic(evidence: Evidence) -> None:
-    kwargs = dict(
+    first = Finding.create(
         rule_id="r",
         owasp_class=OwaspClass.API1_BOLA,
         severity=Severity.HIGH,
         subject=_subject(),
         evidence=[evidence],
     )
-    assert Finding.create(**kwargs).finding_id == Finding.create(**kwargs).finding_id
+    second = Finding.create(
+        rule_id="r",
+        owasp_class=OwaspClass.API1_BOLA,
+        severity=Severity.HIGH,
+        subject=_subject(),
+        evidence=[evidence],
+    )
+    assert first.finding_id == second.finding_id
 
 
 def test_finding_core_fields_are_deterministic_provenance(evidence: Evidence) -> None:
