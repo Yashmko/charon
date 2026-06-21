@@ -50,8 +50,8 @@ Burp extensions like **Autorize** and **AuthMatrix** already do cross-account re
 
 ```
 ┌─────────────────────┐
-│   Input capture      │   API spec + multi-account traffic
-└──────────┬───────────┘
+│   Input capture     │   API spec + multi-account traffic
+└──────────┬──────────┘
            │
 ┌──────────▼───────────┐
 │ Ownership modeling    │   LLM maps fields → resource owners
