@@ -12,6 +12,15 @@ def _locations(comparison: Comparison) -> set[str]:
     return {d.location for d in comparison.field_diffs}
 
 
+def _diff_map(
+    comparison: Comparison,
+) -> dict[str, tuple[str | None, str | None]]:
+    return {
+        d.location: (d.baseline_value, d.other_value)
+        for d in comparison.field_diffs
+    }
+
+
 def test_identical_responses_have_no_field_diffs(
     engine: ComparisonEngine,
 ) -> None:
@@ -47,7 +56,7 @@ def test_header_difference_is_reported(engine: ComparisonEngine) -> None:
     replay = make_replay_result(baseline, headers=(("X-Scope", "public"),))
     comparison = engine.compare(baseline, replay)
 
-    diffs = {d.location: (d.baseline_value, d.other_value) for d in comparison.field_diffs}
+    diffs = _diff_map(comparison)
     assert diffs["header.x-scope"] == ("owner", "public")
 
 
@@ -74,7 +83,7 @@ def test_json_body_field_diffs(engine: ComparisonEngine) -> None:
         body=b'{"owner": "userB", "amount": 100}',
     )
     comparison = engine.compare(baseline, replay)
-    diffs = {d.location: (d.baseline_value, d.other_value) for d in comparison.field_diffs}
+    diffs = _diff_map(comparison)
     assert diffs["body.owner"] == ('"userA"', '"userB"')
     assert "body.amount" not in diffs
 
@@ -123,7 +132,7 @@ def test_content_length_difference_reported(engine: ComparisonEngine) -> None:
     baseline = make_exchange(body=b"short")
     replay = make_replay_result(baseline, body=b"a much longer body")
     comparison = engine.compare(baseline, replay)
-    diffs = {d.location: (d.baseline_value, d.other_value) for d in comparison.field_diffs}
+    diffs = _diff_map(comparison)
     assert diffs["body.length"] == ("5", "18")
 
 
