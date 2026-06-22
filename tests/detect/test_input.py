@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from charon.compare import ComparisonEngine
 from charon.detect import DetectionInput
 
 from tests.detect.conftest import (
@@ -11,7 +12,6 @@ from tests.detect.conftest import (
     make_replay_request,
     make_replay_result,
 )
-from charon.compare import ComparisonEngine
 
 
 def test_is_cross_identity_true_when_labels_differ(bola_input: DetectionInput) -> None:
