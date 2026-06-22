@@ -51,9 +51,9 @@ class HttpxTransport:
 
     def send(self, request: TransportRequest) -> TransportResponse:
         """Send ``request`` via httpx, translating failures to typed errors."""
+        client = self._get_client()
         import httpx
 
-        client = self._get_client()
         try:
             response = client.request(
                 method=request.method,

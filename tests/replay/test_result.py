@@ -32,18 +32,37 @@ def _replay_request() -> ReplayRequest:
     return engine.build_request(exchange, ReplayCredential(label="userB"))
 
 
-def test_execution_requires_exactly_one_outcome() -> None:
+def test_execution_rejects_no_outcome() -> None:
     request = _replay_request()
     with pytest.raises(ValueError):
         ReplayExecution(request=request)  # neither result nor failure
+
+
+def test_execution_rejects_both_outcomes() -> None:
+    request = _replay_request()
     failure = ReplayFailure(
         replay_request=request,
         kind=ReplayFailureKind.TIMEOUT,
         detail="t",
     )
+    result = request  # any non-None placeholder for the result slot
     with pytest.raises(ValueError):
-        ReplayExecution(request=request, failure=failure, result=None)  # ok
-        # The above is valid; construct an invalid both-set case explicitly:
+        ReplayExecution(
+            request=request,
+            failure=failure,
+            result=result,  # type: ignore[arg-type]
+        )
+
+
+def test_execution_accepts_failure_only() -> None:
+    request = _replay_request()
+    failure = ReplayFailure(
+        replay_request=request,
+        kind=ReplayFailureKind.TIMEOUT,
+        detail="t",
+    )
+    execution = ReplayExecution(request=request, failure=failure)
+    assert not execution.succeeded
 
 
 def test_failure_record_is_not_successful() -> None:
