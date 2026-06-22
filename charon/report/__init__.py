@@ -24,6 +24,7 @@ severity or access decisions, and never consults an LLM.
 
 from charon.report.builder import ReportBuilder
 from charon.report.index import ArtifactIndex
+from charon.report.json_renderer import render_json
 from charon.report.markdown import render_markdown
 from charon.report.model import (
     FindingReport,
@@ -31,7 +32,6 @@ from charon.report.model import (
     ReportMode,
     TraceReferences,
 )
-from charon.report.json_renderer import render_json
 
 __all__ = [
     "ArtifactIndex",
