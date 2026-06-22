@@ -78,7 +78,9 @@ def test_raw_dict_backend_rejects_bad_body_type() -> None:
         list(backend.exchanges())
 
 
-def _har(*, body_text: str | None = None, encoding: str | None = None) -> dict:
+def _har(
+    *, body_text: str | None = None, encoding: str | None = None
+) -> dict[str, object]:
     content: dict[str, object] = {}
     if body_text is not None:
         content["text"] = body_text

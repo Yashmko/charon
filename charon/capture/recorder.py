@@ -12,8 +12,11 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from urllib.parse import urlsplit
 
-from charon.capture.config import CaptureConfig, HeaderAction
-from charon.capture.config import REDACTED_PLACEHOLDER
+from charon.capture.config import (
+    REDACTED_PLACEHOLDER,
+    CaptureConfig,
+    HeaderAction,
+)
 from charon.capture.errors import MalformedExchangeError
 from charon.capture.normalize import (
     extract_resource_refs,
@@ -72,7 +75,9 @@ class CaptureRecorder:
                 continue
         return tuple(result)
 
-    def _build_message(self, raw: RawMessage) -> tuple[HttpMessage, tuple[tuple[str, str], ...]]:
+    def _build_message(
+        self, raw: RawMessage
+    ) -> tuple[HttpMessage, tuple[tuple[str, str], ...]]:
         """Normalize a raw message into an ``HttpMessage`` + clean headers.
 
         Returns both the model message (with the secret policy applied) and
