@@ -49,24 +49,24 @@ Burp extensions like **Autorize** and **AuthMatrix** already do cross-account re
 ## How it works
 
 ```
-┌─────────────────────┐
-│   Input capture     │   API spec + multi-account traffic
-└──────────┬──────────┘
-           │
+┌──────────────────┐
+│   Input capture      │   API spec + multi-account traffic
+└──────────┬───────┘
+             │
 ┌──────────▼───────────┐
-│ Ownership modeling   │   LLM maps fields → resource owners
+│ Ownership modeling        │   LLM maps fields → resource owners
 └──────────┬───────────┘
-           │
+             │
 ┌──────────▼───────────┐
-│ Hypothesis + test gen│   Crafts cross-account test cases
+│ Hypothesis + test gen     │   Crafts cross-account test cases
 └──────────┬───────────┘
-           │
+             │
 ┌──────────▼───────────┐
-│ Live replay execution│   Fires requests with swapped tokens
+│ Live replay execution     │   Fires requests with swapped tokens
 └──────────┬───────────┘
            │
 ┌──────────▼────────────┐
-│ Semantic triage+report│   Maps findings to OWASP API Top 10
+│ Semantic triage+report.    │   Maps findings to OWASP API Top 10
 └───────────────────────┘
 ```
 
