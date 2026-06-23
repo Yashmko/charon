@@ -9,8 +9,6 @@ stop guessing IDs. start reasoning about ownership.
 ![python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
-> Working name. Swap it for whatever you like before you publish — check GitHub/PyPI for collisions first.
-
 ---
 
 ## Table of contents
