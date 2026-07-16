@@ -7,7 +7,6 @@ over genuine model artifacts (and the DetectionInput consistency checks pass).
 from __future__ import annotations
 
 import pytest
-
 from charon.capture import CaptureRecorder, RawExchange, RawMessage
 from charon.compare import ComparisonEngine
 from charon.detect import DetectionInput

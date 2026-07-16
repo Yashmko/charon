@@ -37,8 +37,8 @@ from charon.capture.normalize import (
     normalize_query,
     normalize_url,
 )
-from charon.capture.recorder import CaptureRecorder
 from charon.capture.raw import RawExchange, RawMessage
+from charon.capture.recorder import CaptureRecorder
 
 __all__ = [
     "CaptureBackend",

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import cast
 
 from charon.compare.config import ComparisonConfig
 from charon.model import (
@@ -236,7 +237,7 @@ class ComparisonEngine:
         if len(body) > self._config.max_body_bytes_for_structured_diff:
             return None
         try:
-            return json.loads(body.decode("utf-8"))
+            return cast(object, json.loads(body.decode("utf-8")))
         except (ValueError, UnicodeDecodeError):
             return None
 

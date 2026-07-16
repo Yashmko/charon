@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from charon.compare import ComparisonEngine
 from charon.detect import DetectionInput
 

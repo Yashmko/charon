@@ -71,21 +71,21 @@ class Provenanced(Generic[T]):
         return self.source.is_advisory
 
     @classmethod
-    def observed(cls, value: T) -> "Provenanced[T]":
+    def observed(cls, value: T) -> Provenanced[T]:
         """Tag ``value`` as captured directly from real traffic."""
         return cls(value, Provenance.OBSERVED)
 
     @classmethod
-    def replayed(cls, value: T) -> "Provenanced[T]":
+    def replayed(cls, value: T) -> Provenanced[T]:
         """Tag ``value`` as produced by a Charon-issued replay."""
         return cls(value, Provenance.REPLAYED)
 
     @classmethod
-    def derived(cls, value: T) -> "Provenanced[T]":
+    def derived(cls, value: T) -> Provenanced[T]:
         """Tag ``value`` as produced by deterministic computation."""
         return cls(value, Provenance.DERIVED)
 
     @classmethod
-    def inferred(cls, value: T) -> "Provenanced[T]":
+    def inferred(cls, value: T) -> Provenanced[T]:
         """Tag ``value`` as LLM-produced (advisory only)."""
         return cls(value, Provenance.INFERRED)

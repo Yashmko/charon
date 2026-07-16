@@ -34,10 +34,10 @@ class HttpxTransport:
         this module taking a hard dependency at import time.
     """
 
-    def __init__(self, client: "httpx.Client | None" = None) -> None:
+    def __init__(self, client: httpx.Client | None = None) -> None:
         self._client = client
 
-    def _get_client(self) -> "httpx.Client":
+    def _get_client(self) -> httpx.Client:
         if self._client is None:
             try:
                 import httpx

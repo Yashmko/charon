@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 
 import pytest
-
 from charon.capture import (
     CaptureBackend,
     CaptureRecorder,
@@ -30,7 +29,10 @@ def test_raw_dict_backend_yields_raw_exchanges() -> None:
                 "url": "https://h.test/orders/1",
                 "status_code": 200,
                 "request": {"headers": {"X-A": "1"}, "body": None},
-                "response": {"headers": {"Content-Type": "application/json"}, "body": b"{}"},
+                "response": {
+                "headers": {"Content-Type": "application/json"},
+                "body": b"{}",
+            },
             }
         ]
     )

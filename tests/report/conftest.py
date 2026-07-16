@@ -7,7 +7,6 @@ tests render genuine findings and artifacts with full traceability.
 from __future__ import annotations
 
 import pytest
-
 from charon.capture import CaptureRecorder, RawExchange, RawMessage
 from charon.compare import ComparisonEngine
 from charon.detect import DetectionEngine, DetectionInput

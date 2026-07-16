@@ -30,6 +30,7 @@ from charon.replay.errors import (
     ReplayTimeoutError,
     ReplayTransportError,
 )
+from charon.replay.httpx_transport import HttpxTransport
 from charon.replay.result import ReplayExecution, ReplayFailure, ReplayFailureKind
 from charon.replay.transport import (
     Transport,
@@ -38,6 +39,7 @@ from charon.replay.transport import (
 )
 
 __all__ = [
+    "HttpxTransport",
     "ReplayConnectionError",
     "ReplayCredential",
     "ReplayEngine",

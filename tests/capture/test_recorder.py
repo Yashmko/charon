@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from charon.capture import (
     CaptureConfig,
     CaptureRecorder,
@@ -28,7 +27,7 @@ def _raw(**overrides: object) -> RawExchange:
         account_label=str(base["account_label"]),
         method=str(base["method"]),
         url=str(base["url"]),
-        status_code=int(base["status_code"]),  # type: ignore[arg-type]
+        status_code=int(str(base["status_code"])),
         request=base.get("request", RawMessage()),  # type: ignore[arg-type]
         response=base.get("response", RawMessage()),  # type: ignore[arg-type]
     )
@@ -90,7 +89,11 @@ def test_sensitive_headers_can_be_dropped() -> None:
         CaptureConfig(sensitive_header_action=HeaderAction.DROP)
     )
     exchange = recorder.record(
-        _raw(request=RawMessage(headers=(("Authorization", "Bearer secret"), ("x-a", "1"))))
+        _raw(
+            request=RawMessage(
+                headers=(("Authorization", "Bearer secret"), ("x-a", "1"))
+            )
+        )
     )
     names = [name for name, _ in exchange.request.headers]
     assert "authorization" not in names

@@ -10,7 +10,6 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pytest
-
 from charon.capture import CaptureRecorder, RawExchange, RawMessage
 from charon.model import CapturedExchange
 from charon.replay import TransportRequest, TransportResponse

@@ -62,7 +62,10 @@ def test_extract_resource_refs_from_path_and_query() -> None:
 
 
 def test_extract_resource_refs_from_json_body() -> None:
-    body = b'{"id": 8821, "owner_id": "userA", "nested": {"uuid": "550e8400-e29b-41d4-a716-446655440000"}}'
+    body = (
+        b'{"id": 8821, "owner_id": "userA", '
+        b'"nested": {"uuid": "550e8400-e29b-41d4-a716-446655440000"}}'
+    )
     refs = extract_resource_refs(
         path="/x",
         query=(),

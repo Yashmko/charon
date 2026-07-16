@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from charon.model import content_address
 from charon.model.addressing import canonical_json
 

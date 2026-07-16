@@ -8,7 +8,6 @@ exercise genuine inputs rather than hand-mocked stand-ins.
 from __future__ import annotations
 
 import pytest
-
 from charon.capture import CaptureRecorder, RawExchange, RawMessage
 from charon.compare import ComparisonEngine
 from charon.model import CapturedExchange, HttpMessage, ReplayResult

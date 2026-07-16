@@ -131,7 +131,7 @@ class Finding:
         severity: Severity,
         subject: Mapping[str, Provenanced[str]],
         evidence: Iterable[Evidence],
-    ) -> "Finding":
+    ) -> Finding:
         """Construct a finding from concrete :class:`Evidence` objects.
 
         Requiring real evidence objects (rather than id strings) makes it

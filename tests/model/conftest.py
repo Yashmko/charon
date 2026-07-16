@@ -8,7 +8,6 @@ focus on the behavior under test rather than on construction boilerplate.
 from __future__ import annotations
 
 import pytest
-
 from charon.model import (
     AccessDecision,
     CapturedExchange,

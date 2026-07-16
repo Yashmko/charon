@@ -3,3 +3,11 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Generated credential files (user-provided, should not be committed)
+*.credentials.json
+*.creds.json
+
+# Generated report files (produced by charon analyze --output)
+*.report.json
+*.report.md

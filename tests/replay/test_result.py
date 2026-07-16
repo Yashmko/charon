@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from charon.capture import CaptureRecorder, RawExchange, RawMessage
 from charon.model import ReplayRequest
 from charon.replay import (
