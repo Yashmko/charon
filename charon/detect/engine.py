@@ -22,7 +22,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from charon.detect.input import DetectionInput
-from charon.detect.rules import Rule, default_rules
+from charon.detect.rules import Rule, RuleConfig, default_rules
 from charon.model import Evidence, Finding
 
 __all__ = ["DetectionEngine"]
@@ -32,14 +32,20 @@ class DetectionEngine:
     """Applies deterministic rules and emits evidence-backed findings.
 
     :param rules: The rule set to apply. Defaults to the built-in rules.
+    :param config: Configuration that can enable/disable features including
+        the cross-input matrix analysis pass. If not provided, the default
+        ``RuleConfig`` is used.
     """
 
-    def __init__(self, rules: Iterable[Rule] | None = None) -> None:
+    def __init__(
+        self, rules: Iterable[Rule] | None = None, config: RuleConfig | None = None
+    ) -> None:
         provided = tuple(rules) if rules is not None else default_rules()
         # Fixed evaluation order for determinism, regardless of input order.
         self._rules: tuple[Rule, ...] = tuple(
             sorted(provided, key=lambda r: r.rule_id)
         )
+        self._config = config if config is not None else RuleConfig()
 
     @property
     def rules(self) -> tuple[Rule, ...]:
@@ -92,11 +98,21 @@ class DetectionEngine:
     def detect(self, items: Iterable[DetectionInput]) -> tuple[Finding, ...]:
         """Evaluate all rules across many inputs and return unique findings.
 
+        Runs per-input rules first, then the cross-input matrix analysis pass.
         Findings are de-duplicated by ``finding_id`` and returned sorted by
         ``finding_id`` for a stable, reproducible result set.
         """
+        from charon.detect.matrix import MatrixAnalysis
+
         by_id: dict[str, Finding] = {}
-        for item in items:
+        inputs = tuple(items)
+        for item in inputs:
             for finding in self.detect_one(item):
                 by_id[finding.finding_id] = finding
+
+        matrix = MatrixAnalysis(config=self._config)
+        matrix_result = matrix.analyze(inputs)
+        for finding in matrix_result.findings:
+            by_id[finding.finding_id] = finding
+
         return tuple(by_id[key] for key in sorted(by_id))

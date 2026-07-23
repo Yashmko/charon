@@ -19,8 +19,10 @@ the separate ``evidence`` module); it only constructs the minimal
 :class:`~charon.model.Evidence` required to back each finding it emits.
 """
 
+from charon.detect.confidence import ConfidenceScorer, score_findings
 from charon.detect.engine import DetectionEngine
 from charon.detect.input import DetectionInput
+from charon.detect.matrix import MatrixAnalysis, MatrixResult
 from charon.detect.rules import (
     BflaRule,
     BolaRule,
@@ -29,14 +31,22 @@ from charon.detect.rules import (
     RuleMatch,
     default_rules,
 )
+from charon.detect.rules_bopla import BoplaRule
+from charon.detect.rules_missing_authz import MissingAuthzRule
 
 __all__ = [
     "BflaRule",
     "BolaRule",
+    "BoplaRule",
+    "ConfidenceScorer",
     "DetectionEngine",
     "DetectionInput",
+    "MatrixAnalysis",
+    "MatrixResult",
+    "MissingAuthzRule",
     "Rule",
     "RuleConfig",
     "RuleMatch",
     "default_rules",
+    "score_findings",
 ]

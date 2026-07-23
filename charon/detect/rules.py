@@ -57,8 +57,24 @@ class RuleConfig:
 
     enable_bola: bool = True
     enable_bfla: bool = True
+    enable_bopla: bool = True
+    enable_missing_authz: bool = True
+    enable_matrix: bool = True
     bola_severity: Severity = Severity.HIGH
     bfla_severity: Severity = Severity.HIGH
+    bopla_severity: Severity = Severity.HIGH
+    missing_authz_severity: Severity = Severity.CRITICAL
+    #: Minimum number of distinct baseline accounts a single identity must access
+    #: before the widespread privilege escalation finding is emitted.
+    widespread_bola_threshold: int = 3
+    widespread_bola_severity: Severity = Severity.HIGH
+    mutual_access_severity: Severity = Severity.CRITICAL
+    confidence_mutual_access_baseline: float = 0.9
+    confidence_widespread_bola_baseline: float = 0.8
+    confidence_multirule_bonus: float = 0.2
+    confidence_widespread_bonus: float = 0.15
+    #: Minimum number of non-identifier body fields required for BOPLA to fire.
+    bopla_min_data_fields: int = 2
     #: Field-diff locations that, if present, indicate the cross-account
     #: response was *redacted/changed* and therefore is NOT a clean object
     #: exposure. Their presence suppresses the BOLA rule.
@@ -200,5 +216,8 @@ class BflaRule:
 
 def default_rules(config: RuleConfig | None = None) -> tuple[Rule, ...]:
     """Return the built-in rule set, configured by ``config``."""
+    from charon.detect.rules_bopla import BoplaRule
+    from charon.detect.rules_missing_authz import MissingAuthzRule
+
     cfg = config if config is not None else RuleConfig()
-    return (BolaRule(cfg), BflaRule(cfg))
+    return (BolaRule(cfg), BflaRule(cfg), BoplaRule(cfg), MissingAuthzRule(cfg))

@@ -31,7 +31,10 @@ def _make_exchange(
         url=url,
         status_code=status_code,
         request=RawMessage(
-            headers=(("Content-Type", "application/json"),),
+            headers=(
+                ("Content-Type", "application/json"),
+                ("Authorization", "Bearer test-token"),
+            ),
         ),
         response=RawMessage(
             headers=(("Content-Type", "application/json"),),

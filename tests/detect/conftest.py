@@ -19,6 +19,7 @@ from charon.model import (
 )
 
 _JSON = (("Content-Type", "application/json"),)
+_AUTH = (("Authorization", "Bearer test-token"),)
 
 
 def make_baseline(
@@ -34,7 +35,7 @@ def make_baseline(
             method="GET",
             url="https://api.example.test/api/invoices/8821",
             status_code=status_code,
-            request=RawMessage(headers=_JSON),
+            request=RawMessage(headers=_JSON + _AUTH),
             response=RawMessage(headers=_JSON, body=body),
         )
     )

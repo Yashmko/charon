@@ -28,6 +28,7 @@ def _finding_dict(finding: FindingReport) -> dict[str, Any]:
         "rule_id": finding.rule_id,
         "owasp_class": finding.owasp_class,
         "severity": finding.severity,
+        "confidence": finding.confidence,
         "title": finding.title,
         "summary": finding.summary,
         "observed_facts": _fact_list(finding.observed_facts),

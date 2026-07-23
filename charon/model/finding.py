@@ -39,6 +39,7 @@ class OwaspClass(enum.Enum):
     API1_BOLA = "API1"
     API3_BOPLA = "API3"
     API5_BFLA = "API5"
+    API7_MISSING_AUTHZ = "API7"
 
 
 class Severity(enum.Enum):

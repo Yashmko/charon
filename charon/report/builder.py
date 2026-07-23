@@ -48,16 +48,22 @@ class ReportBuilder:
         *,
         mode: ReportMode = ReportMode.DETERMINISTIC,
         annotations: Iterable[Annotation] = (),
+        confidence_scores: Mapping[str, float] | None = None,
     ) -> Report:
         """Build a report over ``findings``.
 
         Findings are sorted by ``finding_id`` for stable output. In
         deterministic mode, ``annotations`` are ignored entirely so no
         Inferred content can appear.
+
+        :param confidence_scores: Optional mapping of ``finding_id`` to
+            a deterministic confidence score in ``[0.0, 1.0]``. Findings
+            not present in the mapping default to ``0.0``.
         """
+        scores = confidence_scores if confidence_scores is not None else {}
         annotations_by_target = self._group_annotations(mode, annotations)
         reports = [
-            self._build_finding(finding, mode, annotations_by_target)
+            self._build_finding(finding, mode, annotations_by_target, scores)
             for finding in findings
         ]
         reports.sort(key=lambda r: r.finding_id)
@@ -90,6 +96,7 @@ class ReportBuilder:
         finding: Finding,
         mode: ReportMode,
         annotations_by_target: Mapping[str, tuple[AnnotationView, ...]],
+        confidence_scores: Mapping[str, float],
     ) -> FindingReport:
         observed: list[ProvenancedFact] = []
         derived: list[ProvenancedFact] = []
@@ -118,6 +125,7 @@ class ReportBuilder:
             rule_id=finding.rule_id,
             owasp_class=finding.owasp_class.value,
             severity=finding.severity.value,
+            confidence=confidence_scores.get(finding.finding_id, 0.0),
             title=self._title(finding),
             summary=self._summary(finding),
             observed_facts=tuple(observed),

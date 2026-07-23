@@ -61,6 +61,7 @@ def _finding_section(finding: FindingReport) -> list[str]:
         f"- **Rule:** `{finding.rule_id}`",
         f"- **OWASP:** {finding.owasp_class}",
         f"- **Severity:** {finding.severity}",
+        f"- **Confidence:** {finding.confidence:.2f}",
         "",
         "### Summary",
         "",

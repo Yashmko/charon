@@ -11,7 +11,12 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from charon.compare import ComparisonEngine
-from charon.detect import DetectionEngine, DetectionInput, default_rules
+from charon.detect import (
+    DetectionEngine,
+    DetectionInput,
+    default_rules,
+    score_findings,
+)
 from charon.model import (
     CapturedExchange,
     Comparison,
@@ -134,9 +139,15 @@ class Pipeline:
 
         findings = self._detect.detect(detection_inputs)
         index = self._build_index(artifact_list, findings)
+        confidence_scores = score_findings(
+            findings,
+            tuple(detection_inputs),
+            self._config.rules,
+        )
         report = ReportBuilder(index=index).build(
             findings,
             mode=self._config.report_mode,
+            confidence_scores=confidence_scores,
         )
         return PipelineResult(
             artifacts=tuple(artifact_list),

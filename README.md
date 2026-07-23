@@ -21,7 +21,7 @@ capture → replay → compare → detect → report
 | `capture` | Complete | Traffic ingestion from HAR files and raw dicts with normalization |
 | `replay` | Complete | HTTP replay engine with pluggable transports and credential management |
 | `compare` | Complete | Deterministic response diffing with volatile-field suppression |
-| `detect` | Complete | BOLA/IDOR and BFLA detection producing evidence-backed findings |
+| `detect` | Complete | BOLA, BFLA, BOPLA, Missing AuthZ, matrix analysis, and confidence scoring producing evidence-backed findings |
 | `report` | Complete | Deterministic JSON and Markdown renderers with traceability |
 | `pipeline` | Complete | Orchestration wiring all stages together |
 | `cli` | Complete | Command-line interface (`charon analyze`) |
@@ -29,9 +29,6 @@ capture → replay → compare → detect → report
 ### Not yet implemented
 - Advisory LLM layer (enrichment, annotation)
 - Ownership/resource relationship inference
-- Multi-identity matrix analysis
-- Additional detection rules (BOPLA, privilege escalation, policy contradiction)
-- Confidence scoring
 
 See `docs/architecture.md`, `docs/v1-scope.md`, and `docs/data-model.md` for
 the locked v1 design.
@@ -109,7 +106,11 @@ usage: charon analyze [-h] [--credentials FILE] [--credential SPEC]
 | Detection | OWASP API Security Top 10 (2023) |
 |-----------|----------------------------------|
 | BOLA/IDOR (cross-account object access) | API1 — Broken Object Level Authorization |
+| BOPLA (excessive data exposure) | API3 — Broken Object Property Level Authorization |
 | BFLA (privilege escalation via function access) | API5 — Broken Function Level Authorization |
+| Missing Authorization (no auth header) | API7 — Missing Function Level Authorization |
+| Widespread privilege escalation (matrix) | API1 — Cross-identity privilege escalation web |
+| Privilege inversion / mutual access (matrix) | API7 — Bidirectional missing authorization |
 
 ## Ethics
 

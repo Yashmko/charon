@@ -90,6 +90,7 @@ class FindingReport:
     rule_id: str
     owasp_class: str
     severity: str
+    confidence: float
     title: str
     summary: str
     observed_facts: tuple[ProvenancedFact, ...]

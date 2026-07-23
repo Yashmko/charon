@@ -22,6 +22,7 @@ from charon.model import (
 from charon.report import ArtifactIndex
 
 _JSON = (("Content-Type", "application/json"),)
+_AUTH = (("Authorization", "Bearer test-token"),)
 _BODY = b'{"id": 8821, "owner": "userA"}'
 
 
@@ -64,7 +65,7 @@ def build_chain(
             method="GET",
             url="https://api.example.test/api/invoices/8821",
             status_code=200,
-            request=RawMessage(headers=_JSON),
+            request=RawMessage(headers=_JSON + _AUTH),
             response=RawMessage(headers=_JSON, body=_BODY),
         )
     )
