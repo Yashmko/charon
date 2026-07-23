@@ -103,7 +103,13 @@ class TestMain:
 
     def test_analyze_with_json_input_and_credentials(self) -> None:
         """Run analyze with a JSON capture file and credentials."""
-        import charon.cli.main as cli_main
+        transport = StubTransport(
+            response=TransportResponse(
+                status_code=200,
+                headers=(("Content-Type", "application/json"),),
+                body=json.dumps({"id": 8821, "owner": "userA"}).encode("utf-8"),
+            )
+        )
 
         capture_path = self._write_capture_json(
             [
@@ -126,23 +132,16 @@ class TestMain:
             ]
         )
         try:
-            cli_main._TEST_TRANSPORT = StubTransport(
-                response=TransportResponse(
-                    status_code=200,
-                    headers=(("Content-Type", "application/json"),),
-                    body=json.dumps({"id": 8821, "owner": "userA"}).encode("utf-8"),
-                )
-            )
-            try:
-                exit_code = main([
+            exit_code = main(
+                [
                     "analyze",
                     capture_path,
                     "--credential", "userB=bearer:tok-b",
                     "--format", "json",
                     "--verbose",
-                ])
-            finally:
-                cli_main._TEST_TRANSPORT = None
+                ],
+                transport=transport,
+            )
         finally:
             Path(capture_path).unlink(missing_ok=True)
 

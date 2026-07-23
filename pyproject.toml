@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "charon"
-version = "0.0.0"
-description = "Deterministic, evidence-driven authorization analysis (model layer)."
+version = "0.1.0"
+description = "Deterministic, evidence-driven HTTP authorization analysis."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -19,6 +19,7 @@ replay = [
 ]
 dev = [
     "pytest>=7.4",
+    "pytest-httpserver>=1.0",
     "ruff>=0.4",
     "mypy>=1.8",
     "httpx>=0.27",

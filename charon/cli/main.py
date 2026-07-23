@@ -37,11 +37,7 @@ from charon.replay import ReplayCredential
 from charon.replay import Transport as TransportProtocol
 from charon.report import ReportMode, render_json, render_markdown
 
-#: Optional override for testing. Set to a :class:`Transport` instance to
-#: avoid real network calls during CLI tests.
-_TEST_TRANSPORT: object | None = None
-
-__all__ = ["build_arg_parser", "main", "_TEST_TRANSPORT"]
+__all__ = ["build_arg_parser", "main"]
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -245,10 +241,16 @@ def _load_captures(input_path: str) -> list[dict[str, Any]]:
     return parsed
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    transport: TransportProtocol | None = None,
+) -> int:
     """Main entry point for the Charon CLI.
 
     :param argv: Command-line arguments (defaults to ``sys.argv[1:]``).
+    :param transport: Optional transport for replay. When omitted, resolves
+        ``HttpxTransport`` if ``httpx`` is available, or raises at pipeline
+        time. Tests pass a stub transport here to avoid real network calls.
     :returns: Exit code (0 for success, 1 for errors).
     """
     parser = build_arg_parser()
@@ -329,7 +331,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.verbose:
         print("Running pipeline...", file=sys.stderr)
 
-    transport = _resolve_transport()
+    transport = transport if transport is not None else _resolve_transport()
 
     pipeline = Pipeline(transport=transport, config=cfg)
     try:
@@ -370,12 +372,7 @@ def _resolve_transport() -> TransportProtocol:
 
     Uses ``HttpxTransport`` when ``httpx`` is available, otherwise falls
     back to a stub that fails with a clear error message.
-
-    The optional ``_TEST_TRANSPORT`` global can be set to inject a stub
-    transport during tests.
     """
-    if _TEST_TRANSPORT is not None:
-        return _TEST_TRANSPORT  # type: ignore[return-value]
     try:
         import httpx  # noqa: F401
 
