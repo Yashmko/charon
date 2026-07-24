@@ -30,7 +30,7 @@ capture → replay → compare → detect → report
 - Advisory LLM layer (enrichment, annotation)
 
 See `docs/architecture.md`, `docs/v1-scope.md`, and `docs/data-model.md` for
-the locked v1 design.
+the locked v1 design
 
 ## Quick Start
 
