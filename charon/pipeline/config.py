@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from charon.compare import ComparisonConfig
 from charon.detect import RuleConfig
+from charon.ownership import OwnershipConfig
 from charon.report import ReportMode
 
 __all__ = ["PipelineConfig"]
@@ -22,6 +23,8 @@ class PipelineConfig:
 
     :param comparison: Configuration for the comparison engine (volatile
         fields, max body size for structured diff).
+    :param ownership: Configuration for the ownership inference engine
+        (owner-field patterns, confidence thresholds).
     :param rules: Configuration for the detection rules (enablement,
         severities).
     :param report_mode: Whether to include advisory annotations in the
@@ -33,6 +36,7 @@ class PipelineConfig:
     """
 
     comparison: ComparisonConfig = field(default_factory=ComparisonConfig)
+    ownership: OwnershipConfig = field(default_factory=OwnershipConfig)
     rules: RuleConfig = field(default_factory=RuleConfig)
     report_mode: ReportMode = ReportMode.DETERMINISTIC
     transport_timeout_seconds: float = 30.0

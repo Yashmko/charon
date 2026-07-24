@@ -246,3 +246,70 @@ class TestPipeline:
         assert "# Charon Authorization Report" in md
         assert "Schema version" in md
         assert result.findings[0].finding_id in md
+
+    def test_ownership_included_in_report(self) -> None:
+        """Pipeline should produce ownership inferences from exchange bodies.
+
+        The exchange response body contains ``owner_id: "userA"`` which
+        matches the account label. The ownership engine should infer that
+        ``userA`` owns this resource, and the report should include it.
+        """
+        baseline = _record(
+            _make_exchange(account_label="userA", status_code=200)
+        )
+        transport = StubTransport(
+            response=TransportResponse(
+                status_code=200,
+                body=b'{"id": 8821, "owner": "userA"}',
+            )
+        )
+        pipeline = Pipeline(transport=transport)
+        result = pipeline.run(
+            exchanges=[baseline],
+            credentials=[ReplayCredential(label="userB", bearer_token="token-b")],
+        )
+
+        # Ownership map should have an inference for the exchange URL.
+        assert result.ownership.count >= 1
+        owner = result.ownership.owner_of(baseline.url)
+        assert owner == "userA"
+
+        # Ownership should appear in the JSON report.
+        import json
+
+        data = json.loads(render_json(result.report))
+        assert len(data["ownership"]) >= 1
+        ownership_entry = data["ownership"][0]
+        assert ownership_entry["owning_account"] == "userA"
+        assert ownership_entry["url"] == baseline.url
+
+    def test_ownership_carries_through_to_detection_subject(self) -> None:
+        """Ownership inferences should be available to detection rules.
+
+        When the baseline exchange has an owner inference, the finding's
+        subject should include ``ownership_confirmed``.
+        """
+        baseline = _record(
+            _make_exchange(
+                account_label="userA",
+                response_body=b'{"id": 8821, "owner_id": "userA"}',
+            )
+        )
+        transport = StubTransport(
+            response=TransportResponse(
+                status_code=200,
+                body=b'{"id": 8821, "owner_id": "userA"}',
+            )
+        )
+        pipeline = Pipeline(transport=transport)
+        result = pipeline.run(
+            exchanges=[baseline],
+            credentials=[ReplayCredential(label="userB", bearer_token="token-b")],
+        )
+
+        assert result.finding_count >= 1
+        finding = result.findings[0]
+        # The ownership_confirmed field should be present when the owner
+        # of the URL matches the baseline account.
+        assert "ownership_confirmed" in finding.subject
+        assert finding.subject["ownership_confirmed"].value == "true"

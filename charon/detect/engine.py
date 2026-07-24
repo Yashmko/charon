@@ -24,6 +24,7 @@ from collections.abc import Iterable
 from charon.detect.input import DetectionInput
 from charon.detect.rules import Rule, RuleConfig, default_rules
 from charon.model import Evidence, Finding
+from charon.ownership import OwnershipMap
 
 __all__ = ["DetectionEngine"]
 
@@ -95,17 +96,38 @@ class DetectionEngine:
             )
         return tuple(findings)
 
-    def detect(self, items: Iterable[DetectionInput]) -> tuple[Finding, ...]:
+    def detect(
+        self,
+        items: Iterable[DetectionInput],
+        ownership: OwnershipMap | None = None,
+    ) -> tuple[Finding, ...]:
         """Evaluate all rules across many inputs and return unique findings.
 
         Runs per-input rules first, then the cross-input matrix analysis pass.
         Findings are de-duplicated by ``finding_id`` and returned sorted by
         ``finding_id`` for a stable, reproducible result set.
+
+        :param ownership: Ownership map for ownership-aware rule evaluation.
+            When provided, inputs without explicit ownership use this map.
         """
         from charon.detect.matrix import MatrixAnalysis
 
         by_id: dict[str, Finding] = {}
         inputs = tuple(items)
+
+        # Attach ownership to inputs that carry the default empty map.
+        if ownership is not None:
+            inputs = tuple(
+                item if item.ownership.inferences else DetectionInput(
+                    comparison=item.comparison,
+                    baseline_exchange=item.baseline_exchange,
+                    replay_request=item.replay_request,
+                    replay_result=item.replay_result,
+                    ownership=ownership,
+                )
+                for item in inputs
+            )
+
         for item in inputs:
             for finding in self.detect_one(item):
                 by_id[finding.finding_id] = finding

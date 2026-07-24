@@ -14,7 +14,7 @@ never mutates them, and nothing here consults an LLM.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from charon.model import (
     CapturedExchange,
@@ -22,6 +22,7 @@ from charon.model import (
     ReplayRequest,
     ReplayResult,
 )
+from charon.ownership import OwnershipMap
 
 __all__ = ["DetectionInput"]
 
@@ -36,12 +37,15 @@ class DetectionInput:
     :param replay_request: The replay request that produced the other side.
     :param replay_result: The replay result that produced the other side
         (``comparison.other_ref == replay_result.result_id``).
+    :param ownership: Optional ownership map for resource-ownership aware
+        rule evaluation. Defaults to an empty map.
     """
 
     comparison: Comparison
     baseline_exchange: CapturedExchange
     replay_request: ReplayRequest
     replay_result: ReplayResult
+    ownership: OwnershipMap = field(default_factory=OwnershipMap)
 
     def __post_init__(self) -> None:
         # Cheap, deterministic consistency checks: the bundle must actually

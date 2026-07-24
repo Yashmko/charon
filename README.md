@@ -28,7 +28,6 @@ capture → replay → compare → detect → report
 
 ### Not yet implemented
 - Advisory LLM layer (enrichment, annotation)
-- Ownership/resource relationship inference
 
 See `docs/architecture.md`, `docs/v1-scope.md`, and `docs/data-model.md` for
 the locked v1 design.

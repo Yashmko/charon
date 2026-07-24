@@ -97,7 +97,7 @@ class Rule(Protocol):
 
 def _subject(item: DetectionInput) -> dict[str, Provenanced[str]]:
     """Build the deterministic subject common to authorization findings."""
-    return {
+    result = {
         "method": Provenanced.observed(item.baseline_exchange.method),
         "url": Provenanced.observed(item.baseline_exchange.url),
         "baseline_account": Provenanced.observed(
@@ -113,6 +113,12 @@ def _subject(item: DetectionInput) -> dict[str, Provenanced[str]]:
             item.comparison.other.access_decision.value
         ),
     }
+    owner = item.ownership.owner_of(item.baseline_exchange.url)
+    if owner is not None:
+        result["ownership_confirmed"] = Provenanced.derived(
+            "true" if owner == item.baseline_exchange.account_label else "false"
+        )
+    return result
 
 
 def _has_meaningful_body_diff(

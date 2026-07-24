@@ -68,6 +68,15 @@ def render_json(report: Report) -> str:
         "schema_version": report.schema_version,
         "mode": report.mode.value,
         "finding_count": report.finding_count,
+        "ownership": [
+            {
+                "url": o.url,
+                "owning_account": o.owning_account,
+                "source_field": o.source_field,
+                "confidence": o.confidence,
+            }
+            for o in report.ownership
+        ],
         "findings": [_finding_dict(f) for f in report.findings],
     }
     return json.dumps(

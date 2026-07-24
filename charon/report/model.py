@@ -22,9 +22,11 @@ __all__ = [
     "FieldDifference",
     "TraceReferences",
     "AnnotationView",
+    "OwnershipView",
     "FindingReport",
     "Report",
 ]
+
 
 #: Schema version for the JSON output; bumped only on breaking changes.
 REPORT_SCHEMA_VERSION = "1"
@@ -83,6 +85,22 @@ class AnnotationView:
 
 
 @dataclass(frozen=True, slots=True)
+class OwnershipView:
+    """A deterministic ownership inference, rendered for traceability.
+
+    :param url: Normalized URL of the resource whose ownership was inferred.
+    :param owning_account: The account determined to own this resource.
+    :param source_field: The response JSON field providing the evidence.
+    :param confidence: Confidence score for this inference.
+    """
+
+    url: str
+    owning_account: str
+    source_field: str
+    confidence: float
+
+
+@dataclass(frozen=True, slots=True)
 class FindingReport:
     """The fully-resolved, deterministic presentation of one finding."""
 
@@ -106,6 +124,7 @@ class Report:
 
     mode: ReportMode
     findings: tuple[FindingReport, ...]
+    ownership: tuple[OwnershipView, ...] = ()
     schema_version: str = field(default=REPORT_SCHEMA_VERSION)
 
     @property

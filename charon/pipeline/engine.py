@@ -25,6 +25,7 @@ from charon.model import (
     ReplayRequest,
     ReplayResult,
 )
+from charon.ownership import OwnershipEngine, OwnershipMap
 from charon.pipeline.config import PipelineConfig
 from charon.replay import (
     ReplayCredential,
@@ -60,11 +61,13 @@ class PipelineResult:
         traceability chain.
     :param findings: All unique findings across all inputs, sorted by
         finding_id.
+    :param ownership: Ownership map inferred from captured exchanges.
     :param report: The assembled, format-agnostic report.
     """
 
     artifacts: tuple[PipelineArtifact, ...]
     findings: tuple[Finding, ...]
+    ownership: OwnershipMap
     report: Report
 
     @property
@@ -92,6 +95,7 @@ class Pipeline:
             timeout_seconds=cfg.transport_timeout_seconds,
         )
         self._compare = ComparisonEngine(config=cfg.comparison)
+        self._ownership = OwnershipEngine(config=cfg.ownership)
         self._detect = DetectionEngine(
             rules=default_rules(config=cfg.rules)
         )
@@ -123,6 +127,7 @@ class Pipeline:
         :returns: A :class:`PipelineResult` with all artifacts, findings,
             and the assembled report.
         """
+        exchange_list = tuple(exchanges)
         artifact_list: list[PipelineArtifact] = []
         detection_inputs: list[DetectionInput] = []
 
@@ -130,14 +135,17 @@ class Pipeline:
         # one-shot iterator that would be exhausted after the first exchange.
         cred_list = tuple(credentials)
 
-        for exchange in exchanges:
+        # Run ownership inference over all captured exchanges before replay.
+        ownership = self._ownership.analyze(exchange_list)
+
+        for exchange in exchange_list:
             for credential in cred_list:
                 artifact = self._process(exchange, credential)
                 artifact_list.append(artifact)
                 if artifact.detection_input is not None:
                     detection_inputs.append(artifact.detection_input)
 
-        findings = self._detect.detect(detection_inputs)
+        findings = self._detect.detect(detection_inputs, ownership=ownership)
         index = self._build_index(artifact_list, findings)
         confidence_scores = score_findings(
             findings,
@@ -148,10 +156,12 @@ class Pipeline:
             findings,
             mode=self._config.report_mode,
             confidence_scores=confidence_scores,
+            ownership=ownership,
         )
         return PipelineResult(
             artifacts=tuple(artifact_list),
             findings=findings,
+            ownership=ownership,
             report=report,
         )
 

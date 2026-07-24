@@ -13,11 +13,13 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 
 from charon.model import Annotation, Finding, Provenance, Provenanced
+from charon.ownership import OwnershipMap
 from charon.report.index import ArtifactIndex
 from charon.report.model import (
     AnnotationView,
     FieldDifference,
     FindingReport,
+    OwnershipView,
     ProvenancedFact,
     Report,
     ReportMode,
@@ -49,6 +51,7 @@ class ReportBuilder:
         mode: ReportMode = ReportMode.DETERMINISTIC,
         annotations: Iterable[Annotation] = (),
         confidence_scores: Mapping[str, float] | None = None,
+        ownership: OwnershipMap | None = None,
     ) -> Report:
         """Build a report over ``findings``.
 
@@ -59,6 +62,8 @@ class ReportBuilder:
         :param confidence_scores: Optional mapping of ``finding_id`` to
             a deterministic confidence score in ``[0.0, 1.0]``. Findings
             not present in the mapping default to ``0.0``.
+        :param ownership: Optional ownership map whose inferences are
+            included in the report for traceability.
         """
         scores = confidence_scores if confidence_scores is not None else {}
         annotations_by_target = self._group_annotations(mode, annotations)
@@ -67,7 +72,28 @@ class ReportBuilder:
             for finding in findings
         ]
         reports.sort(key=lambda r: r.finding_id)
-        return Report(mode=mode, findings=tuple(reports))
+        ownership_views = self._build_ownership(ownership)
+        return Report(
+            mode=mode,
+            findings=tuple(reports),
+            ownership=ownership_views,
+        )
+
+    @staticmethod
+    def _build_ownership(
+        ownership: OwnershipMap | None,
+    ) -> tuple[OwnershipView, ...]:
+        if ownership is None:
+            return ()
+        return tuple(
+            OwnershipView(
+                url=i.url,
+                owning_account=i.owning_account,
+                source_field=i.source_field,
+                confidence=i.confidence,
+            )
+            for i in ownership.inferences
+        )
 
     def _group_annotations(
         self, mode: ReportMode, annotations: Iterable[Annotation]
