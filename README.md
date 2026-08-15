@@ -24,7 +24,7 @@ capture → replay → compare → detect → report
 | `detect` | Complete | BOLA, BFLA, BOPLA, Missing AuthZ, matrix analysis, and confidence scoring producing evidence-backed findings |
 | `report` | Complete | Deterministic JSON and Markdown renderers with traceability |
 | `pipeline` | Complete | Orchestration wiring all stages together |
-| `cli` | Complete | Command-line interface (`charon analyze`) |
+| `cli` |Not Completed | Command-line interface (`charon analyze`) |
 
 ### Not yet implemented
 - Advisory LLM layer (enrichment, annotation)
