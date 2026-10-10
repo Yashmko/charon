@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from charon.detect import MatrixAnalysis, MatrixResult, RuleConfig
+from charon.detect import MatrixAnalysis, RuleConfig
 from charon.model import OwaspClass, Severity
 
 from tests.detect.conftest import make_input

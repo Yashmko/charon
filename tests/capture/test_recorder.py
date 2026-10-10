@@ -104,17 +104,46 @@ def test_redaction_keeps_determinism_but_changes_id_vs_keep() -> None:
     raw = _raw(request=RawMessage(headers=(("Authorization", "Bearer secret"),)))
     redacting = CaptureRecorder()
     keeping = CaptureRecorder(CaptureConfig(sensitive_header_action=HeaderAction.KEEP))
-    # Determinism under a fixed policy.
     assert redacting.record(raw).exchange_id == redacting.record(raw).exchange_id
-    # Different policy legitimately yields a different artifact.
     assert redacting.record(raw).exchange_id != keeping.record(raw).exchange_id
+
+
+def test_custom_sensitive_headers_are_case_insensitive() -> None:
+    recorder = CaptureRecorder(
+        CaptureConfig(sensitive_headers=frozenset({"X-Session-Secret"}))
+    )
+    exchange = recorder.record(
+        _raw(request=RawMessage(headers=(("X-SESSION-SECRET", "dont-persist-me"),)))
+    )
+    assert ("x-session-secret", REDACTED_PLACEHOLDER) in exchange.request.headers
+    assert "dont-persist-me" not in str(exchange.request.to_canonical())
+
+
+def test_response_set_cookie_is_redacted_by_default(recorder: CaptureRecorder) -> None:
+    exchange = recorder.record(
+        _raw(response=RawMessage(headers=(("Set-Cookie", "sid=private-session"),)))
+    )
+    assert ("set-cookie", REDACTED_PLACEHOLDER) in exchange.response.headers
+    assert "private-session" not in str(exchange.response.to_canonical())
+
+
+def test_capture_does_not_claim_to_redact_body_content() -> None:
+    secret = b'{"access_token":"body-secret"}'
+    exchange = CaptureRecorder().record(
+        _raw(
+            response=RawMessage(
+                headers=(("Content-Type", "application/json"),),
+                body=secret,
+            )
+        )
+    )
+    # Body fidelity is deliberate; callers must sanitize captures before sharing.
+    assert exchange.response.body == secret
 
 
 def test_binary_body_is_preserved(recorder: CaptureRecorder) -> None:
     raw_bytes = b"\x89PNG\r\n\x1a\n\xff\xfe\x00\x01"
-    exchange = recorder.record(
-        _raw(response=RawMessage(body=raw_bytes))
-    )
+    exchange = recorder.record(_raw(response=RawMessage(body=raw_bytes)))
     assert exchange.response.body == raw_bytes
 
 

@@ -77,6 +77,28 @@ def test_secrets_never_persisted_in_replay_request(
     assert "userA-secret" not in str(execution.request.to_canonical())
 
 
+def test_custom_credential_header_is_redacted_from_replay_artifact(
+    exchange: CapturedExchange,
+) -> None:
+    secret = "custom-auth-secret"
+    engine = ReplayEngine(StubTransport())
+    execution = engine.replay(
+        exchange,
+        ReplayCredential(
+            label="userB",
+            extra_headers=(("X-Private-Session", secret),),
+        ),
+    )
+
+    assert execution.succeeded
+    assert execution.request is not None
+    persisted = execution.request.to_canonical()
+    assert secret not in str(persisted)
+    assert ("x-private-session", REDACTED_PLACEHOLDER) in (
+        execution.request.request.headers
+    )
+
+
 def test_cookie_replacement(exchange: CapturedExchange) -> None:
     transport = StubTransport()
     engine = ReplayEngine(transport)

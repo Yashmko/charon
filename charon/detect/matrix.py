@@ -11,7 +11,6 @@ from charon.model import (
     Finding,
     OwaspClass,
     Provenanced,
-    Severity,
 )
 
 __all__ = ["MatrixAnalysis", "MatrixResult"]
@@ -97,7 +96,10 @@ class MatrixAnalysis:
                 continue
             if item.comparison.other.access_decision is not AccessDecision.GRANTED:
                 continue
-            key = (item.baseline_exchange.account_label, item.replay_request.identity.label)
+            key = (
+                item.baseline_exchange.account_label,
+                item.replay_request.identity.label,
+            )
             pairs[key].append(item)
 
         results: list[Finding] = []

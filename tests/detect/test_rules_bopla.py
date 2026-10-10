@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from charon.detect import BoplaRule, DetectionInput, RuleConfig
+from charon.detect import BoplaRule, RuleConfig
 from charon.model import OwaspClass, Severity
 
 from tests.detect.conftest import make_input
@@ -8,8 +8,14 @@ from tests.detect.conftest import make_input
 
 def test_bopla_fires_on_cross_account_rich_body() -> None:
     item = make_input(
-        baseline_body=b'{"id": 8821, "owner": "userA", "email": "a@x.test", "role": "admin"}',
-        replay_body=b'{"id": 8821, "owner": "userA", "email": "a@x.test", "role": "admin"}',
+        baseline_body=(
+            b'{"id": 8821, "owner": "userA", "email": "a@x.test", '
+            b'"role": "admin"}'
+        ),
+        replay_body=(
+            b'{"id": 8821, "owner": "userA", "email": "a@x.test", '
+            b'"role": "admin"}'
+        ),
     )
     match = BoplaRule().evaluate(item)
     assert match is not None
@@ -40,7 +46,10 @@ def test_bopla_does_not_fire_when_replay_denied() -> None:
 
 def test_bopla_does_not_fire_when_body_differs() -> None:
     item = make_input(
-        baseline_body=b'{"id": 8821, "owner": "userA", "email": "a@x.test", "role": "admin"}',
+        baseline_body=(
+            b'{"id": 8821, "owner": "userA", "email": "a@x.test", '
+            b'"role": "admin"}'
+        ),
         replay_body=b'{"id": 8821, "owner": "userA"}',
     )
     assert BoplaRule().evaluate(item) is None
@@ -64,8 +73,14 @@ def test_bopla_does_not_fire_on_body_below_threshold() -> None:
 
 def test_bopla_respects_disable_flag() -> None:
     item = make_input(
-        baseline_body=b'{"id": 8821, "owner": "userA", "email": "a@x.test", "role": "admin"}',
-        replay_body=b'{"id": 8821, "owner": "userA", "email": "a@x.test", "role": "admin"}',
+        baseline_body=(
+            b'{"id": 8821, "owner": "userA", "email": "a@x.test", '
+            b'"role": "admin"}'
+        ),
+        replay_body=(
+            b'{"id": 8821, "owner": "userA", "email": "a@x.test", '
+            b'"role": "admin"}'
+        ),
     )
     rule = BoplaRule(RuleConfig(enable_bopla=False))
     assert rule.evaluate(item) is None
@@ -73,8 +88,14 @@ def test_bopla_respects_disable_flag() -> None:
 
 def test_bopla_severity_is_configurable() -> None:
     item = make_input(
-        baseline_body=b'{"id": 8821, "owner": "userA", "email": "a@x.test", "role": "admin"}',
-        replay_body=b'{"id": 8821, "owner": "userA", "email": "a@x.test", "role": "admin"}',
+        baseline_body=(
+            b'{"id": 8821, "owner": "userA", "email": "a@x.test", '
+            b'"role": "admin"}'
+        ),
+        replay_body=(
+            b'{"id": 8821, "owner": "userA", "email": "a@x.test", '
+            b'"role": "admin"}'
+        ),
     )
     rule = BoplaRule(RuleConfig(bopla_severity=Severity.CRITICAL))
     match = rule.evaluate(item)
