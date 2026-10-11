@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from charon.detect.input import DetectionInput
-from charon.detect.rules import Rule, RuleConfig, RuleMatch, _subject
-from charon.model import AccessDecision, OwaspClass, Severity
+from charon.detect.rules import RuleConfig, RuleMatch, _subject
+from charon.model import AccessDecision, OwaspClass
 
 __all__ = ["MissingAuthzRule"]
 

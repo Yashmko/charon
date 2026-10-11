@@ -5,13 +5,12 @@ from dataclasses import dataclass, field
 
 from charon.detect.input import DetectionInput
 from charon.detect.rules import (
-    Rule,
     RuleConfig,
     RuleMatch,
     _has_meaningful_body_diff,
     _subject,
 )
-from charon.model import AccessDecision, OwaspClass, Provenanced, Severity
+from charon.model import AccessDecision, OwaspClass, Provenanced
 
 __all__ = ["BoplaRule"]
 

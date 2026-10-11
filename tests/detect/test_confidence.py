@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from charon.detect import DetectionEngine, score_findings
-from charon.detect.confidence import ConfidenceScorer
 from charon.detect.rules import RuleConfig
-from charon.model import Finding, Severity
 
 from tests.detect.conftest import make_input
 
@@ -30,8 +28,16 @@ def test_bola_has_default_confidence() -> None:
     findings = engine.detect(items)
     scores = score_findings(findings, items)
     for finding in findings:
-        if "bola" in finding.rule_id and "bopla" not in finding.rule_id and "widespread" not in finding.rule_id and "mutual" not in finding.rule_id:
-            assert scores[finding.finding_id] == 0.5, f"Expected 0.5 for {finding.rule_id}, got {scores[finding.finding_id]}"
+        if (
+            "bola" in finding.rule_id
+            and "bopla" not in finding.rule_id
+            and "widespread" not in finding.rule_id
+            and "mutual" not in finding.rule_id
+        ):
+            assert scores[finding.finding_id] == 0.5, (
+                f"Expected 0.5 for {finding.rule_id}, "
+                f"got {scores[finding.finding_id]}"
+            )
 
 
 def test_bfla_has_default_confidence() -> None:
@@ -47,7 +53,11 @@ def test_bfla_has_default_confidence() -> None:
     findings = engine.detect(items)
     scores = score_findings(findings, items)
     for finding in findings:
-        if "bfla" in finding.rule_id and "widespread" not in finding.rule_id and "mutual" not in finding.rule_id:
+        if (
+            "bfla" in finding.rule_id
+            and "widespread" not in finding.rule_id
+            and "mutual" not in finding.rule_id
+        ):
             assert scores[finding.finding_id] == 0.6
 
 
@@ -56,8 +66,14 @@ def test_multirule_bonus_increases_confidence() -> None:
         make_input(
             baseline_account="userA",
             replay_identity="userB",
-            baseline_body=b'{"id": 1, "owner": "userA", "email": "a@x.test", "role": "admin"}',
-            replay_body=b'{"id": 1, "owner": "userA", "email": "a@x.test", "role": "admin"}',
+            baseline_body=(
+                b'{"id": 1, "owner": "userA", "email": "a@x.test", '
+                b'"role": "admin"}'
+            ),
+            replay_body=(
+                b'{"id": 1, "owner": "userA", "email": "a@x.test",'
+                b'"role": "admin"}'
+            ),
         ),
     )
     engine = DetectionEngine()
@@ -108,7 +124,11 @@ def test_widespread_bonus_boosts_per_input_rules() -> None:
     findings = engine.detect(items)
     scores = score_findings(findings, items)
     for finding in findings:
-        if "bola" in finding.rule_id and "bopla" not in finding.rule_id and "widespread" not in finding.rule_id:
+        if (
+            "bola" in finding.rule_id
+            and "bopla" not in finding.rule_id
+            and "widespread" not in finding.rule_id
+        ):
             # 0.5 (base) + 0.15 (widespread bonus) = 0.65
             assert scores[finding.finding_id] == 0.65
 
@@ -118,32 +138,56 @@ def test_confidence_capped_at_one() -> None:
         make_input(
             baseline_account="userA",
             replay_identity="attacker",
-            baseline_body=b'{"id": 1, "owner": "userA", "email": "a@x.test", "role": "admin"}',
-            replay_body=b'{"id": 1, "owner": "userA", "email": "a@x.test", "role": "admin"}',
+            baseline_body=(
+                b'{"id": 1, "owner": "userA", "email": "a@x.test",'
+                b'"role": "admin"}'
+            ),
+            replay_body=(
+                b'{"id": 1, "owner": "userA", "email": "a@x.test",'
+                b'"role": "admin"}'
+            ),
         ),
         make_input(
             baseline_account="userB",
             replay_identity="attacker",
-            baseline_body=b'{"id": 2, "owner": "userB", "email": "b@x.test", "role": "user"}',
-            replay_body=b'{"id": 2, "owner": "userB", "email": "b@x.test", "role": "user"}',
+            baseline_body=(
+                b'{"id": 2, "owner": "userB", "email": "b@x.test", '
+                b'"role": "user"}'
+            ),
+            replay_body=(
+                b'{"id": 2, "owner": "userB", "email": "b@x.test",'
+                b'"role": "user"}'
+            ),
         ),
         make_input(
             baseline_account="userC",
             replay_identity="attacker",
-            baseline_body=b'{"id": 3, "owner": "userC", "email": "c@x.test", "role": "mod"}',
-            replay_body=b'{"id": 3, "owner": "userC", "email": "c@x.test", "role": "mod"}',
+            baseline_body=(
+                b'{"id": 3, "owner": "userC", "email": "c@x.test", '
+                b'"role": "mod"}'
+            ),
+            replay_body=(
+                b'{"id": 3, "owner": "userC", "email": "c@x.test",'
+                b'"role": "mod"}'
+            ),
         ),
         make_input(
             baseline_account="userD",
             replay_identity="attacker",
-            baseline_body=b'{"id": 4, "owner": "userD", "email": "d@x.test", "role": "admin"}',
-            replay_body=b'{"id": 4, "owner": "userD", "email": "d@x.test", "role": "admin"}',
+            baseline_body=(
+                b'{"id": 4, "owner": "userD", "email": "d@x.test", '
+                b'"role": "admin"}'
+            ),
+            replay_body=(
+                b'{"id": 4, "owner": "userD", "email": "d@x.test",'
+                b'"role": "admin"}'
+            ),
         ),
     )
     engine = DetectionEngine()
     findings = engine.detect(items)
     scores = score_findings(findings, items)
-    for fid, score in scores.items():
+    for _fid, score in scores.items():
         assert 0.0 <= score <= 1.0
 
 
@@ -158,5 +202,5 @@ def test_confidence_with_config_override() -> None:
         items,
         config,
     )
-    for finding_id, score in scores.items():
+    for _finding_id, score in scores.items():
         assert 0.0 <= score <= 1.0
