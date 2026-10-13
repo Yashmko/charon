@@ -39,27 +39,32 @@
   },
   "cases": [
     {
-      "id": "home-public",
+      "id": "home-policy-unclear",
       "method": "GET",
       "endpoint": "/",
       "path": "/",
-      "expected_result": "not_vulnerable",
-      "vulnerability_class": "None; public home/informational response (negative control)",
+      "expected_result": "inconclusive",
+      "vulnerability_class": "Access-control policy unspecified for the VAmPI home response",
       "expected_owasp_classes": [],
       "evaluation_status": "tested",
       "baseline_status_code": 200,
       "source_label": [
         {
-          "document": "openapi_specs/openapi3.yml",
-          "reference": "paths['/'].get",
-          "label": "VAmPI home; no operation-level security requirement"
+          "document": "README.md",
+          "line": 25,
+          "quote": "|     GET    |               /               |                     VAmPI home                     |",
+          "reference": "Actions table, GET /",
+          "label": "Names the operation as VAmPI home; no access policy stated"
         },
         {
-          "document": "README.md",
-          "reference": "Actions table, GET /",
-          "label": "VAmPI home"
+          "document": "openapi_specs/openapi3.yml",
+          "line": 38,
+          "quote": "      summary: VAmPI home",
+          "reference": "paths['/'].get",
+          "label": "Names the operation as VAmPI home; no access policy stated"
         }
-      ]
+      ],
+      "label_rationale": "The pinned README/OpenAPI identify the route as VAmPI home but do not state whether its access is intentionally public. It is therefore inconclusive, not a not_vulnerable negative control."
     },
     {
       "id": "users-list-public",
@@ -74,38 +79,90 @@
       "source_label": [
         {
           "document": "README.md",
+          "line": 18,
+          "quote": "VAmPI's flow of actions is going like this: an unregistered user can see minimal information about the dummy users included in the API. A user can register and then login to be allowed using the token received during login to post a book. For a book posted the data accepted are the title and a secret about that book. Each book is unique for every user and only the owner of the book should be allowed to view the secret.",
           "reference": "VAmPI flow of actions",
-          "label": "An unregistered user can see minimal information about dummy users"
+          "label": "Says unregistered users can see minimal information about dummy users"
+        },
+        {
+          "document": "README.md",
+          "line": 27,
+          "quote": "|     GET    |           /users/v1           |      Displays all users with basic information     |",
+          "reference": "Actions table, GET /users/v1",
+          "label": "Documents the basic user-list operation"
         },
         {
           "document": "openapi_specs/openapi3.yml",
-          "reference": "paths['/users/v1'].get / operationId api_views.users.get_all_users",
-          "label": "Retrieves all users; response contains basic username/email information; no operation-level security requirement"
+          "line": 67,
+          "quote": "      description: Displays all users with basic information",
+          "reference": "paths['/users/v1'].get",
+          "label": "Documents the basic-information response"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 71,
+          "quote": "          description: See basic info about all users",
+          "reference": "paths['/users/v1'].get.responses['200']",
+          "label": "Documents the basic-information response"
         }
-      ]
+      ],
+      "label_rationale": "The README explicitly describes an unregistered user viewing minimal information about dummy users, and the list operation is documented as basic user information."
     },
     {
-      "id": "user-profile-public",
+      "id": "user-profile-policy-unclear",
       "method": "GET",
       "endpoint": "/users/v1/{username}",
       "path": "/users/v1/charon_eval_alice",
-      "expected_result": "not_vulnerable",
-      "vulnerability_class": "None for this benign literal lookup; public minimal profile (negative control)",
+      "expected_result": "inconclusive",
+      "vulnerability_class": "Access policy unspecified for a benign literal lookup of a registered synthetic user",
       "expected_owasp_classes": [],
       "evaluation_status": "tested",
       "baseline_status_code": 200,
       "source_label": [
         {
           "document": "README.md",
+          "line": 18,
+          "quote": "VAmPI's flow of actions is going like this: an unregistered user can see minimal information about the dummy users included in the API. A user can register and then login to be allowed using the token received during login to post a book. For a book posted the data accepted are the title and a secret about that book. Each book is unique for every user and only the owner of the book should be allowed to view the secret.",
           "reference": "VAmPI flow of actions",
-          "label": "An unregistered user can see minimal information about dummy users"
+          "label": "Public-read statement is limited to minimal information about dummy users"
+        },
+        {
+          "document": "README.md",
+          "line": 31,
+          "quote": "|     GET    |      /users/v1/{username}     |              Displays user by username             |",
+          "reference": "Actions table, GET /users/v1/{username}",
+          "label": "Documents the profile lookup, not its access policy"
         },
         {
           "document": "openapi_specs/openapi3.yml",
-          "reference": "paths['/users/v1/{username}'].get / operationId api_views.users.get_by_username",
-          "label": "Displays user by username; response schema has username and email; no operation-level security requirement"
+          "line": 267,
+          "quote": "      summary: Retrieves user by username",
+          "reference": "paths['/users/v1/{username}'].get",
+          "label": "Documents the profile operation, not its access policy"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 268,
+          "quote": "      description: Displays user by username",
+          "reference": "paths['/users/v1/{username}'].get",
+          "label": "Documents the profile operation, not its access policy"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 286,
+          "quote": "                  username:",
+          "reference": "paths['/users/v1/{username}'].get.responses['200']",
+          "label": "Documents a username response field"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 289,
+          "quote": "                  email:",
+          "reference": "paths['/users/v1/{username}'].get.responses['200']",
+          "label": "Documents an email response field"
         }
-      ]
+      ],
+      "label_rationale": "The README public-access statement is specifically about dummy users; this case queried a newly registered synthetic account. The OpenAPI describes the profile fields but does not state whether this account should be publicly readable, so the source does not support a not_vulnerable label for this exact case."
     },
     {
       "id": "debug-sensitive-data",
@@ -113,7 +170,7 @@
       "endpoint": "/users/v1/_debug",
       "path": "/users/v1/_debug",
       "expected_result": "vulnerable",
-      "vulnerability_class": "Excessive Data Exposure through debug endpoint (BOPLA/API3)",
+      "vulnerability_class": "Excessive Data Exposure through debug endpoint (VAmPI label; evaluated against Charon API3)",
       "expected_owasp_classes": [
         "API3"
       ],
@@ -122,15 +179,41 @@
       "source_label": [
         {
           "document": "README.md",
+          "line": 47,
+          "quote": " - Excessive Data Exposure through debug endpoint",
           "reference": "List of Vulnerabilities",
-          "label": "Excessive Data Exposure through debug endpoint"
+          "label": "VAmPI vulnerability label"
+        },
+        {
+          "document": "README.md",
+          "line": 28,
+          "quote": "|     GET    |        /users/v1/_debug       |         Displays all details for all users         |",
+          "reference": "Actions table, GET /users/v1/_debug",
+          "label": "Identifies the debug endpoint"
         },
         {
           "document": "openapi_specs/openapi3.yml",
-          "reference": "paths['/users/v1/_debug'].get / operationId api_views.users.debug",
-          "label": "Displays all details for all users; response schema includes password and admin"
+          "line": 93,
+          "quote": "      description: Displays all details for all users",
+          "reference": "paths['/users/v1/_debug'].get",
+          "label": "Documents all-details response"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 108,
+          "quote": "                        admin:",
+          "reference": "paths['/users/v1/_debug'].get.responses['200']",
+          "label": "Documents the exposed admin field"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 114,
+          "quote": "                        password:",
+          "reference": "paths['/users/v1/_debug'].get.responses['200']",
+          "label": "Documents the exposed password field"
         }
-      ]
+      ],
+      "label_rationale": "VAmPI labels this endpoint excessive data exposure. API3/BOPLA is the evaluation mapping to Charon’s rule; VAmPI itself does not attach an OWASP API code to this README item."
     },
     {
       "id": "me-current-user",
@@ -144,16 +227,28 @@
       "baseline_status_code": 200,
       "source_label": [
         {
-          "document": "openapi_specs/openapi3.yml",
-          "reference": "paths['/me'].get / operationId api_views.users.me",
-          "label": "Bearer authentication required; returns information about the currently authenticated user"
+          "document": "README.md",
+          "line": 26,
+          "quote": "|     GET    |               /me             |           Displays the user that is logged in       |",
+          "reference": "Actions table, GET /me",
+          "label": "Describes current-user access"
         },
         {
-          "document": "README.md",
-          "reference": "Actions table, GET /me",
-          "label": "Displays the user that is logged in"
+          "document": "openapi_specs/openapi3.yml",
+          "line": 218,
+          "quote": "          - bearerAuth: []",
+          "reference": "paths['/me'].get.security",
+          "label": "Requires bearer authentication"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 222,
+          "quote": "        description: Displays information about the currently authenticated user",
+          "reference": "paths['/me'].get",
+          "label": "Limits the response to the authenticated user"
         }
-      ]
+      ],
+      "label_rationale": "For this specific test, valid login-issued tokens return each caller’s own current-user data. The separate weak-signing-key vulnerability is listed as a different, untested case."
     },
     {
       "id": "book-cross-account",
@@ -161,7 +256,7 @@
       "endpoint": "/books/v1/{book_title}",
       "path": "/books/v1/charon_eval_alice_book",
       "expected_result": "vulnerable",
-      "vulnerability_class": "Broken Object Level Authorization (BOLA/API1)",
+      "vulnerability_class": "Broken Object Level Authorization (VAmPI label; Charon API1 mapping)",
       "expected_owasp_classes": [
         "API1"
       ],
@@ -170,15 +265,34 @@
       "source_label": [
         {
           "document": "README.md",
+          "line": 18,
+          "quote": "VAmPI's flow of actions is going like this: an unregistered user can see minimal information about the dummy users included in the API. A user can register and then login to be allowed using the token received during login to post a book. For a book posted the data accepted are the title and a secret about that book. Each book is unique for every user and only the owner of the book should be allowed to view the secret.",
+          "reference": "VAmPI flow of actions",
+          "label": "Says only the owner should view a book secret"
+        },
+        {
+          "document": "README.md",
+          "line": 45,
+          "quote": " - Broken Object Level Authorization",
           "reference": "List of Vulnerabilities",
-          "label": "Broken Object Level Authorization"
+          "label": "VAmPI vulnerability label"
         },
         {
           "document": "openapi_specs/openapi3.yml",
-          "reference": "paths['/books/v1/{book_title}'].get / operationId api_views.books.get_by_title",
-          "label": "Description says only the owner may retrieve the book and secret"
+          "line": 593,
+          "quote": "        Retrieves book by title along with secret. Only the owner may retrieve",
+          "reference": "paths['/books/v1/{book_title}'].get",
+          "label": "States the owner-only policy"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 594,
+          "quote": "        it",
+          "reference": "paths['/books/v1/{book_title}'].get",
+          "label": "Completes the owner-only policy statement"
         }
-      ]
+      ],
+      "label_rationale": "VAmPI explicitly labels BOLA and says only the book owner should retrieve the secret. API1 is the corresponding Charon evaluation rule."
     },
     {
       "id": "password-change-cross-user",
@@ -186,7 +300,7 @@
       "endpoint": "/users/v1/{username}/password",
       "path": "/users/v1/charon_eval_bob/password",
       "expected_result": "vulnerable",
-      "vulnerability_class": "Unauthorized Password Change; cross-user object authorization (BOLA/API1)",
+      "vulnerability_class": "Unauthorized Password Change (VAmPI label; evaluated against Charon API1)",
       "expected_owasp_classes": [
         "API1"
       ],
@@ -195,15 +309,34 @@
       "source_label": [
         {
           "document": "README.md",
+          "line": 44,
+          "quote": " - Unauthorized Password Change",
           "reference": "List of Vulnerabilities",
-          "label": "Unauthorized Password Change"
+          "label": "VAmPI vulnerability label"
+        },
+        {
+          "document": "README.md",
+          "line": 34,
+          "quote": "|     PUT    | /users/v1/{username}/password |                Update users password               |",
+          "reference": "Actions table, PUT /users/v1/{username}/password",
+          "label": "Maps the label to the password-update operation"
         },
         {
           "document": "openapi_specs/openapi3.yml",
-          "reference": "paths['/users/v1/{username}/password'].put / operationId api_views.users.update_password",
-          "label": "Update users password for a username path parameter; bearer authentication required"
+          "line": 432,
+          "quote": "      summary: Update users password",
+          "reference": "paths['/users/v1/{username}/password'].put",
+          "label": "Identifies the password-update operation"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 438,
+          "quote": "          description: username to update password",
+          "reference": "paths['/users/v1/{username}/password'].put.parameters",
+          "label": "Identifies the username path parameter"
         }
-      ]
+      ],
+      "label_rationale": "VAmPI lists Unauthorized Password Change. API1 is the evaluation mapping for the captured cross-user username-path operation; VAmPI does not explicitly assign an OWASP code to this individual label."
     },
     {
       "id": "admin-only-delete",
@@ -218,15 +351,34 @@
       "source_label": [
         {
           "document": "README.md",
+          "line": 32,
+          "quote": "|   DELETE   |      /users/v1/{username}     |       Deletes user by username (Only Admins)       |",
           "reference": "Actions table, DELETE /users/v1/{username}",
-          "label": "Deletes user by username (Only Admins)"
+          "label": "States that only admins may delete users"
         },
         {
           "document": "openapi_specs/openapi3.yml",
-          "reference": "paths['/users/v1/{username}'].delete / operationId api_views.users.delete_user",
-          "label": "Description says only admins; 401 response documents non-admin denial"
+          "line": 312,
+          "quote": "      summary: Deletes user by username (Only Admins)",
+          "reference": "paths['/users/v1/{username}'].delete",
+          "label": "States the admin-only operation"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 313,
+          "quote": "      description: Deletes user by username (Only Admins)",
+          "reference": "paths['/users/v1/{username}'].delete",
+          "label": "States the admin-only operation"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 351,
+          "quote": "                    example: 'Only Admins may delete users!'",
+          "reference": "paths['/users/v1/{username}'].delete.responses['401']",
+          "label": "Documents non-admin denial"
         }
-      ]
+      ],
+      "label_rationale": "The source explicitly describes deletion as admin-only and documents a 401 response with the non-admin denial message; the Alice-denied/admin-allowed transition is therefore an intended role boundary."
     },
     {
       "id": "user-lookup-sqli",

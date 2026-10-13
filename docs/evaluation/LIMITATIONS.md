@@ -2,10 +2,12 @@
 
 ## What this run found and missed
 
-The run was limited to eight labeled HTTP exchanges against the pinned,
+The run was limited to eight executed HTTP exchanges against the pinned,
 loopback-only VAmPI instance, using one baseline account (`charon_eval_alice`)
-and two replay identities (`charon_eval_bob` and VAmPI's seeded `admin`).
-The detailed output is in [`raw/charon-report.json`](raw/charon-report.json)
+and two replay identities (`charon_eval_bob` and VAmPI's seeded `admin`). Six
+source-audited cases contribute to metrics; the home response and a literal
+lookup of the newly registered synthetic profile are inconclusive and
+excluded. The detailed output is in [`raw/charon-report.json`](raw/charon-report.json)
 and [`raw/run-summary.json`](raw/run-summary.json).
 
 - **Found the two API1 positives:** cross-account retrieval of Alice's book and
@@ -16,13 +18,15 @@ and [`raw/run-summary.json`](raw/run-summary.json).
   measured set. The current BOPLA rule counts direct top-level response fields;
   the debug response wraps its records under a single `users` key, below the
   rule's two-field threshold.
-- **Public endpoints generated false positives:** the documented public home,
-  users list, and benign literal profile lookup were labeled not vulnerable
-  for these authorization tests. Charon nevertheless emitted API1 for all
-  three; API3 also appeared on the home and profile responses; API7 appeared on
-  all three. The code treats identical cross-identity responses and a missing
-  baseline `Authorization` header as signals without knowing that those
-  operations are intended to be public.
+- **Public/ambiguous access cases generated findings:** the source audit
+  supports a `not_vulnerable` label for the documented basic-information users
+  list, which generated API1 and API7 findings. The home operation and literal
+  lookup of the newly registered synthetic profile also generated findings
+  (API1/API3/API7), but the pinned README/OpenAPI do not establish their access
+  policies for those exact requests. Those two cases are now `inconclusive`,
+  not metric false positives. The detector still treats identical
+  cross-identity responses and a missing baseline `Authorization` header as
+  signals without endpoint policy context.
 - **Debug endpoint class mismatch:** the source labels the debug issue as
   excessive data exposure; the run emitted API1 and API7 instead of the
   expected API3. Under the source-defined, single-label ground truth these are
@@ -42,8 +46,9 @@ would be false positives in a different application or policy.
 
 ## Not tested
 
-The machine-readable ground truth has 17 cases: 8 were executed and 9 remain
-`not_tested` or `inconclusive`. In particular, this run did **not** test:
+The machine-readable ground truth has 17 cases: 8 were executed (6
+metric-eligible and 2 inconclusive), and 9 were not executed. In particular,
+this run did **not** test:
 
 - SQL injection (the captured username was a benign literal; no SQLi probe was
   generated).
@@ -85,10 +90,10 @@ these tests at a non-local service.
 
 ## Sample-size and method caveats
 
-- There are only 8 executed cases, with one baseline account and two replay
-  identities. Per-class denominators are small; these exact ratios describe
-  this corpus only and should not be generalized as expected production
-  precision or recall.
+- There are 8 executed cases, but only 6 conclusive metric cases, with one
+  baseline account and two replay identities. Per-class denominators are small;
+  these exact ratios describe this corpus only and should not be generalized
+  as expected production precision or recall.
 - There are no source-labeled positive API5 or API7 cases in this eight-case
   set. Their recall is therefore **N/A**, not zero. API5/API7 precision is
   affected only by the observed false positives.
@@ -97,9 +102,11 @@ these tests at a non-local service.
   as documented in `ground_truth.json`; they are not a count of raw report
   entries.
 - VAmPI ran with `vulnerable=1` only; no secure (`vulnerable=0`) instance was
-  tested. The negative controls are documented-public endpoints, the
-  current-user endpoint, and the admin-only delete policy within the same
-  instance.
+  tested. Conclusive non-vulnerable cases are the documented basic-information
+  users list, the valid-token current-user endpoint, and the admin-only delete
+  policy within the same instance. The home and synthetic-profile observations
+  are excluded because their access policies are not established by the pinned
+  source.
 - The password-change replay uses only synthetic accounts and a fixed
   synthetic password. The admin delete case targets a disposable user. Each
   runner invocation resets the VAmPI database before recreating the test data.

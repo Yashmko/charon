@@ -286,17 +286,21 @@ def _summarize(
     report: dict[str, Any],
     observations: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    tested_cases = [
+    executed_cases = [
         case
         for case in ground_truth["cases"]
         if case["evaluation_status"] == "tested"
-        and case["expected_result"] in {"vulnerable", "not_vulnerable"}
+    ]
+    metric_cases = [
+        case
+        for case in executed_cases
+        if case["expected_result"] in {"vulnerable", "not_vulnerable"}
     ]
     case_by_key = {
-        (case["method"], case["path"]): case for case in tested_cases
+        (case["method"], case["path"]): case for case in executed_cases
     }
     predictions: dict[str, set[str]] = {
-        case["id"]: set() for case in tested_cases
+        case["id"]: set() for case in executed_cases
     }
     observed_findings: list[dict[str, Any]] = []
     unmapped: list[str] = []
@@ -311,7 +315,7 @@ def _summarize(
         path = urlsplit(url).path
         case = case_by_key.get((method, path))
         if case is None and not method:
-            candidates = [item for item in tested_cases if item["path"] == path]
+            candidates = [item for item in executed_cases if item["path"] == path]
             if len(candidates) == 1:
                 case = candidates[0]
         if case is None:
@@ -333,13 +337,21 @@ def _summarize(
 
     if unmapped:
         raise RuntimeError(
-            "Charon emitted findings that could not be mapped to a labeled "
+            "Charon emitted findings that could not be mapped to an executed "
             f"case: {', '.join(unmapped)}. The raw report is saved; review it "
             "before interpreting metrics."
         )
 
+    observation_by_case = {
+        item["case_id"]: item for item in observations
+    }
     case_results: list[dict[str, Any]] = []
-    for case in tested_cases:
+    for case in executed_cases:
+        observation = observation_by_case.get(case["id"])
+        if observation is None:
+            raise RuntimeError(
+                f"Executed case {case['id']} has no baseline observation."
+            )
         case_results.append(
             {
                 "case_id": case["id"],
@@ -347,11 +359,8 @@ def _summarize(
                 "path": case["path"],
                 "expected_result": case["expected_result"],
                 "expected_owasp_classes": case["expected_owasp_classes"],
-                "baseline_status_code": next(
-                    item["baseline_status_code"]
-                    for item in observations
-                    if item["case_id"] == case["id"]
-                ),
+                "included_in_metrics": case in metric_cases,
+                "baseline_status_code": observation["baseline_status_code"],
                 "observed_owasp_classes": sorted(predictions[case["id"]]),
             }
         )
@@ -361,13 +370,13 @@ def _summarize(
         code = evaluation_class["owasp_class"]
         positive_cases = {
             case["id"]
-            for case in tested_cases
+            for case in metric_cases
             if case["expected_result"] == "vulnerable"
             and code in case["expected_owasp_classes"]
         }
         negative_cases = {
             case["id"]
-            for case in tested_cases
+            for case in metric_cases
             if code not in case["expected_owasp_classes"]
         }
         predicted_cases = {
@@ -398,6 +407,22 @@ def _summarize(
             }
         )
 
+    inconclusive_cases = [
+        {
+            "case_id": case["id"],
+            "expected_result": "inconclusive",
+            "vulnerability_class": case["vulnerability_class"],
+            "baseline_status_code": observation_by_case[case["id"]][
+                "baseline_status_code"
+            ],
+            "observed_owasp_classes": sorted(predictions[case["id"]]),
+            "reason": case.get(
+                "label_rationale", "The source does not support a conclusive label."
+            ),
+        }
+        for case in executed_cases
+        if case["expected_result"] == "inconclusive"
+    ]
     not_tested_cases = [
         {
             "case_id": case["id"],
@@ -414,7 +439,9 @@ def _summarize(
         "schema_version": 1,
         "mode": report.get("mode"),
         "finding_count": report.get("finding_count"),
-        "tested_case_count": len(tested_cases),
+        "tested_case_count": len(executed_cases),
+        "metric_case_count": len(metric_cases),
+        "inconclusive_case_count": len(inconclusive_cases),
         "case_results": case_results,
         "observed_findings": sorted(
             observed_findings,
@@ -426,6 +453,7 @@ def _summarize(
             ),
         ),
         "metrics": metrics,
+        "inconclusive_cases": inconclusive_cases,
         "not_tested_cases": not_tested_cases,
     }
 
@@ -577,10 +605,10 @@ def main() -> int:
             alice_token,
             None,
         ),
-        ("home-public", "GET", "/", None, None),
+        ("home-policy-unclear", "GET", "/", None, None),
         ("users-list-public", "GET", "/users/v1", None, None),
         (
-            "user-profile-public",
+            "user-profile-policy-unclear",
             "GET",
             f"/users/v1/{ALICE}",
             None,
