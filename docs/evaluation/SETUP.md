@@ -118,3 +118,53 @@ captures are deliberately not persisted.
 
 A second invocation repeats the database reset and test-data setup. To rerun,
 use the same commands above while the loopback VAmPI process is running.
+
+## 6. Optional-policy comparison and independent second API
+
+The Part 2 comparison uses the same VAmPI runner and pinned target. Run once
+without `--endpoint-policy` and once with
+`--endpoint-policy docs/evaluation/vampi-endpoint-policy.json`; use distinct
+output directories so no raw run is overwritten. Exact commands and measured
+results are in [`POLICY_RESULTS.md`](POLICY_RESULTS.md).
+
+The independent API check uses the Python-only ShopAPI target pinned in
+[`second_api_ground_truth.json`](second_api_ground_truth.json). It was verified
+without Docker, using Python `3.11.2`, an isolated virtual environment, and a
+temporary SQLite database outside the source checkout. To reproduce it:
+
+```bash
+git clone https://github.com/rangarajusaivivek/OWASP-API-Top10-Lab.git \
+  /tmp/charon-eval-owasp-api-top10-lab
+git -C /tmp/charon-eval-owasp-api-top10-lab checkout \
+  4ebf2b57abdab076d1bbc092132819925573cde1
+python3 -m venv /tmp/charon-eval-owasp-api-env
+/tmp/charon-eval-owasp-api-env/bin/python -m pip install \
+  -r /tmp/charon-eval-owasp-api-top10-lab/requirements.txt
+```
+
+Start the lab from its `vulnerable_api` directory. This invokes Flask directly,
+sets a disposable DB path before initialization, disables debug/reload, and
+binds only to loopback; Docker is not involved.
+
+```bash
+cd /tmp/charon-eval-owasp-api-top10-lab/vulnerable_api
+/tmp/charon-eval-owasp-api-env/bin/python -c \
+  'import app; app.DB_PATH="/tmp/charon-eval-owasp-api.db"; app.init_db(); app.app.run(host="127.0.0.1", port=5001, debug=False, use_reloader=False)'
+```
+
+In another terminal, from the Charon repository root, run the pinned second-API
+case. The runner verifies the source revision and accepts loopback URLs only.
+Choose a fresh output directory for any later rerun.
+
+```bash
+cd /path/to/charon
+/tmp/charon-eval-env/bin/python docs/evaluation/run_second_api_eval.py \
+  --base-url http://127.0.0.1:5001 \
+  --target-dir /tmp/charon-eval-owasp-api-top10-lab \
+  --output-dir docs/evaluation/raw/second-api
+```
+
+Only seeded synthetic users and order data are used. The runner persists a
+sanitized Alice capture and report; it keeps live bearer tokens in a temporary
+file and removes them after analysis. Stop the local Flask process after the
+check.

@@ -1,5 +1,9 @@
 # Evaluation limitations
 
+This page describes the original Part 1 VAmPI no-policy run. See the
+[Part 2 endpoint-policy results](POLICY_RESULTS.md) for the paired policy
+experiment and the independent second-API cross-check.
+
 ## What this run found and missed
 
 The run was limited to eight executed HTTP exchanges against the pinned,
@@ -24,9 +28,10 @@ and [`raw/run-summary.json`](raw/run-summary.json).
   lookup of the newly registered synthetic profile also generated findings
   (API1/API3/API7), but the pinned README/OpenAPI do not establish their access
   policies for those exact requests. Those two cases are now `inconclusive`,
-  not metric false positives. The detector still treats identical
-  cross-identity responses and a missing baseline `Authorization` header as
-  signals without endpoint policy context.
+  not metric false positives. In the no-policy run, identical cross-identity
+  responses and a missing baseline `Authorization` header remain signals
+  without endpoint-specific intent; the optional Part 2 policy config adds
+  explicit caller-declared suppressions rather than inferring that intent.
 - **Debug endpoint class mismatch:** the source labels the debug issue as
   excessive data exposure; the run emitted API1 and API7 instead of the
   expected API3. Under the source-defined, single-label ground truth these are
@@ -70,7 +75,8 @@ labels in `ground_truth.json`, but their TP/FP/FN/precision/recall cells remain
 **TBD** because this Charon run did not exercise them. TBD is not zero. The
 current `charon analyze` flow replays captured requests; it does not mutate
 request bodies, path values, JWTs, or request rates to create those probes.
-No Charon detection code was changed for this evaluation.
+No detection rule was changed; Part 2 adds optional, caller-authored endpoint
+policy handling after detection.
 
 To rerun the executed subset on a laptop, start the pinned Python VAmPI exactly
 as shown in [`SETUP.md`](SETUP.md), then run this command from the Charon root:
@@ -110,7 +116,28 @@ these tests at a non-local service.
 - The password-change replay uses only synthetic accounts and a fixed
   synthetic password. The admin delete case targets a disposable user. Each
   runner invocation resets the VAmPI database before recreating the test data.
-- The raw report and summary are retained. Raw input captures and live bearer
-  tokens are not persisted: the debug response contains synthetic plaintext
-  passwords, and the runner removes its temporary capture/credential files
-  after Charon completes.
+- The Part 1 VAmPI raw report and summary are retained. Its input captures and
+  live bearer tokens are not persisted: the debug response contains synthetic
+  plaintext passwords, and the runner removes temporary capture/credential
+  files after Charon completes.
+
+## Endpoint-policy and second-API caveats
+
+- The Part 2 VAmPI comparison shows that explicit route declarations remove
+  findings from two endpoints and preserve them as `policy-declared` audit
+  entries. It does not establish that endpoint policies improve general
+  precision: only two caller-authored declarations were evaluated against
+  eight exchanges, and incorrect or overbroad declarations can hide real
+  findings.
+- `allowed_roles` is metadata only. Charon does not map credential labels to
+  application roles or verify enforcement; the operator is responsible for
+  source review and the resulting suppression decision.
+- The independent ShopAPI cross-check contains one source-labelled API1 case,
+  no labelled negative controls, and two Charon findings (API1 and API3).
+  It confirms that Charon emitted the expected API1 class in this example, but
+  it is not a precision/recall estimate or broad multi-API validation. The
+  additional API3 classification is retained in the raw report and was not
+  adjudicated by this one-case evaluation.
+- Both the VAmPI and ShopAPI evaluations ran on loopback against intentionally
+  vulnerable lab instances with synthetic test data. Neither result should be
+  generalized to production targets.

@@ -1,0 +1,649 @@
+{
+  "baseline_observations": [
+    {
+      "baseline_status_code": 204,
+      "case_id": "password-change-cross-user",
+      "method": "PUT",
+      "path": "/users/v1/charon_eval_bob/password"
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "book-cross-account",
+      "method": "GET",
+      "path": "/books/v1/charon_eval_alice_book"
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "home-policy-unclear",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "users-list-public",
+      "method": "GET",
+      "path": "/users/v1"
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "user-profile-policy-unclear",
+      "method": "GET",
+      "path": "/users/v1/charon_eval_alice"
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "debug-sensitive-data",
+      "method": "GET",
+      "path": "/users/v1/_debug"
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "me-current-user",
+      "method": "GET",
+      "path": "/me"
+    },
+    {
+      "baseline_status_code": 401,
+      "case_id": "admin-only-delete",
+      "method": "DELETE",
+      "path": "/users/v1/charon_eval_disposable"
+    }
+  ],
+  "case_results": [
+    {
+      "baseline_status_code": 200,
+      "case_id": "home-policy-unclear",
+      "expected_owasp_classes": [],
+      "expected_result": "inconclusive",
+      "included_in_metrics": false,
+      "method": "GET",
+      "observed_owasp_classes": [
+        "API1",
+        "API3",
+        "API7"
+      ],
+      "path": "/",
+      "policy_status": null
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "users-list-public",
+      "expected_owasp_classes": [],
+      "expected_result": "not_vulnerable",
+      "included_in_metrics": true,
+      "method": "GET",
+      "observed_owasp_classes": [],
+      "path": "/users/v1",
+      "policy_status": "policy-declared"
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "user-profile-policy-unclear",
+      "expected_owasp_classes": [],
+      "expected_result": "inconclusive",
+      "included_in_metrics": false,
+      "method": "GET",
+      "observed_owasp_classes": [
+        "API1",
+        "API3",
+        "API7"
+      ],
+      "path": "/users/v1/charon_eval_alice",
+      "policy_status": null
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "debug-sensitive-data",
+      "expected_owasp_classes": [
+        "API3"
+      ],
+      "expected_result": "vulnerable",
+      "included_in_metrics": true,
+      "method": "GET",
+      "observed_owasp_classes": [
+        "API1",
+        "API7"
+      ],
+      "path": "/users/v1/_debug",
+      "policy_status": null
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "me-current-user",
+      "expected_owasp_classes": [],
+      "expected_result": "not_vulnerable",
+      "included_in_metrics": true,
+      "method": "GET",
+      "observed_owasp_classes": [],
+      "path": "/me",
+      "policy_status": null
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "book-cross-account",
+      "expected_owasp_classes": [
+        "API1"
+      ],
+      "expected_result": "vulnerable",
+      "included_in_metrics": true,
+      "method": "GET",
+      "observed_owasp_classes": [
+        "API1",
+        "API3"
+      ],
+      "path": "/books/v1/charon_eval_alice_book",
+      "policy_status": null
+    },
+    {
+      "baseline_status_code": 204,
+      "case_id": "password-change-cross-user",
+      "expected_owasp_classes": [
+        "API1"
+      ],
+      "expected_result": "vulnerable",
+      "included_in_metrics": true,
+      "method": "PUT",
+      "observed_owasp_classes": [
+        "API1"
+      ],
+      "path": "/users/v1/charon_eval_bob/password",
+      "policy_status": null
+    },
+    {
+      "baseline_status_code": 401,
+      "case_id": "admin-only-delete",
+      "expected_owasp_classes": [],
+      "expected_result": "not_vulnerable",
+      "included_in_metrics": true,
+      "method": "DELETE",
+      "observed_owasp_classes": [],
+      "path": "/users/v1/charon_eval_disposable",
+      "policy_status": "policy-declared"
+    }
+  ],
+  "charon_command": [
+    "python -m charon analyze <temporary-captures.json>",
+    "--credentials <temporary-credentials.json>",
+    "--format json",
+    "--mode deterministic",
+    "--output <output-dir>/charon-report.json",
+    "--verbose",
+    "--endpoint-policy",
+    "vampi-endpoint-policy.json"
+  ],
+  "charon_commit_hash": "20a65d65b1ecb11d39fdd483f7673bcfce3343e9",
+  "charon_version": "charon 0.1.0",
+  "database_reset_attempts": 1,
+  "endpoint_policy_file": "vampi-endpoint-policy.json",
+  "finding_count": 22,
+  "inconclusive_case_count": 2,
+  "inconclusive_cases": [
+    {
+      "baseline_status_code": 200,
+      "case_id": "home-policy-unclear",
+      "expected_result": "inconclusive",
+      "observed_owasp_classes": [
+        "API1",
+        "API3",
+        "API7"
+      ],
+      "reason": "The pinned README/OpenAPI identify the route as VAmPI home but do not state whether its access is intentionally public. It is therefore inconclusive, not a not_vulnerable negative control.",
+      "vulnerability_class": "Access-control policy unspecified for the VAmPI home response"
+    },
+    {
+      "baseline_status_code": 200,
+      "case_id": "user-profile-policy-unclear",
+      "expected_result": "inconclusive",
+      "observed_owasp_classes": [
+        "API1",
+        "API3",
+        "API7"
+      ],
+      "reason": "The README public-access statement is specifically about dummy users; this case queried a newly registered synthetic account. The OpenAPI describes the profile fields but does not state whether this account should be publicly readable, so the source does not support a not_vulnerable label for this exact case.",
+      "vulnerability_class": "Access policy unspecified for a benign literal lookup of a registered synthetic user"
+    }
+  ],
+  "metric_case_count": 6,
+  "metrics": [
+    {
+      "false_negatives": 0,
+      "false_positives": 1,
+      "name": "BOLA",
+      "negative_cases": 4,
+      "owasp_class": "API1",
+      "positive_cases": 2,
+      "precision_exact": "2/3",
+      "recall_exact": "1",
+      "rule_id": "authz.bola.cross-account-object-exposure",
+      "test_cases": 6,
+      "true_negatives": 3,
+      "true_positives": 2
+    },
+    {
+      "false_negatives": 1,
+      "false_positives": 1,
+      "name": "BOPLA",
+      "negative_cases": 5,
+      "owasp_class": "API3",
+      "positive_cases": 1,
+      "precision_exact": "0",
+      "recall_exact": "0",
+      "rule_id": "authz.bopla.excessive-data-exposure",
+      "test_cases": 6,
+      "true_negatives": 4,
+      "true_positives": 0
+    },
+    {
+      "false_negatives": 0,
+      "false_positives": 0,
+      "name": "BFLA",
+      "negative_cases": 6,
+      "owasp_class": "API5",
+      "positive_cases": 0,
+      "precision_exact": null,
+      "recall_exact": null,
+      "rule_id": "authz.bfla.privilege-transition",
+      "test_cases": 6,
+      "true_negatives": 6,
+      "true_positives": 0
+    },
+    {
+      "false_negatives": 0,
+      "false_positives": 1,
+      "name": "Missing authorization signal",
+      "negative_cases": 6,
+      "owasp_class": "API7",
+      "positive_cases": 0,
+      "precision_exact": "0",
+      "recall_exact": null,
+      "rule_id": "authz.missing-authz.no-authorization-header",
+      "test_cases": 6,
+      "true_negatives": 5,
+      "true_positives": 0
+    }
+  ],
+  "mode": "deterministic",
+  "not_tested_cases": [
+    {
+      "case_id": "user-lookup-sqli",
+      "expected_result": "vulnerable",
+      "reason": "The evaluated request uses a benign literal username. Charon's deterministic authorization replay does not mutate path parameters or run SQL injection probes.",
+      "status": "TBD",
+      "vulnerability_class": "SQL injection (VAmPI README label)"
+    },
+    {
+      "case_id": "registration-mass-assignment",
+      "expected_result": "vulnerable",
+      "reason": "Registration is state-changing and Charon replays the captured body unchanged; it does not vary request properties such as admin.",
+      "status": "TBD",
+      "vulnerability_class": "Mass Assignment (BOPLA/API3 mapping)"
+    },
+    {
+      "case_id": "login-enumeration",
+      "expected_result": "vulnerable",
+      "reason": "Enumeration requires comparing distinct username/password guesses; this evaluation keeps request bodies fixed and tests identity replay only.",
+      "status": "TBD",
+      "vulnerability_class": "User and Password Enumeration"
+    },
+    {
+      "case_id": "email-regexdos",
+      "expected_result": "vulnerable",
+      "reason": "No pathological email input was sent; deliberately triggering a regex denial of service is outside this authorization evaluation and could stall the target process.",
+      "status": "TBD",
+      "vulnerability_class": "RegexDOS (denial of service)"
+    },
+    {
+      "case_id": "weak-jwt-signing-key",
+      "expected_result": "vulnerable",
+      "reason": "This run uses tokens obtained from the login endpoint and does not forge or alter JWTs.",
+      "status": "TBD",
+      "vulnerability_class": "JWT authentication bypass via weak signing key (authentication weakness)"
+    },
+    {
+      "case_id": "rate-limiting-api-wide",
+      "expected_result": "vulnerable",
+      "reason": "No rate or resource-exhaustion load was generated; this is not measured by Charon's request/response authorization rules.",
+      "status": "TBD",
+      "vulnerability_class": "Lack of Resources & Rate Limiting"
+    },
+    {
+      "case_id": "book-list-policy",
+      "expected_result": "inconclusive",
+      "reason": "The OpenAPI operation is public but does not state whether listing owners/book titles is intended; no authorization label is assigned by VAmPI's vulnerability list.",
+      "status": "TBD",
+      "vulnerability_class": "BOLA policy unclear for global book listing"
+    },
+    {
+      "case_id": "book-create",
+      "expected_result": "inconclusive",
+      "reason": "The operation creates state and is not named as vulnerable in VAmPI's vulnerability list; the test does not replay state-changing book creation.",
+      "status": "TBD",
+      "vulnerability_class": "No source-defined vulnerability label for this operation"
+    },
+    {
+      "case_id": "database-reset",
+      "expected_result": "inconclusive",
+      "reason": "Used only as setup; it drops and recreates VAmPI's database and is never included in Charon input.",
+      "status": "TBD",
+      "vulnerability_class": "No source-defined vulnerability label; destructive test setup endpoint"
+    }
+  ],
+  "observed_findings": [
+    {
+      "case_id": "book-cross-account",
+      "finding_id": "sha256:ad2cd7a7a2bda1d754f36240ecb662733d0f98df8657eb8e849e9633a82bc237",
+      "method": "GET",
+      "owasp_class": "API1",
+      "path": "/books/v1/charon_eval_alice_book",
+      "replay_identity": "admin",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "book-cross-account",
+      "finding_id": "sha256:d78ec9d6e69384432f4293568009dd42d10d22b6b8e4a51da87cab4c8e32336e",
+      "method": "GET",
+      "owasp_class": "API1",
+      "path": "/books/v1/charon_eval_alice_book",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "book-cross-account",
+      "finding_id": "sha256:9ab55c8b69625b154418f5ac932e608042800d9dc3add310fe2a85e8382074c7",
+      "method": "GET",
+      "owasp_class": "API3",
+      "path": "/books/v1/charon_eval_alice_book",
+      "replay_identity": "admin",
+      "rule_id": "authz.bopla.excessive-data-exposure"
+    },
+    {
+      "case_id": "book-cross-account",
+      "finding_id": "sha256:c62fc97332b28c67f39617631b1ac6cff7f4888f4ce1f70a0537470235c1ac9e",
+      "method": "GET",
+      "owasp_class": "API3",
+      "path": "/books/v1/charon_eval_alice_book",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.bopla.excessive-data-exposure"
+    },
+    {
+      "case_id": "debug-sensitive-data",
+      "finding_id": "sha256:1b11d90e43c5cdf47af5d86c441696118c2c8b8537ea3143b56131ed28f10b2c",
+      "method": "GET",
+      "owasp_class": "API1",
+      "path": "/users/v1/_debug",
+      "replay_identity": "admin",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "debug-sensitive-data",
+      "finding_id": "sha256:e7556a27a92e6a4e9fe9a120b44d023cf07c8d9fc82ceb4d73a65442e0c38a09",
+      "method": "GET",
+      "owasp_class": "API1",
+      "path": "/users/v1/_debug",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "debug-sensitive-data",
+      "finding_id": "sha256:aecf0b1d6e6774efca7a85711f992e39c1342a2f9e3bf6641cac8d34aefc8892",
+      "method": "GET",
+      "owasp_class": "API7",
+      "path": "/users/v1/_debug",
+      "replay_identity": "admin",
+      "rule_id": "authz.missing-authz.no-authorization-header"
+    },
+    {
+      "case_id": "debug-sensitive-data",
+      "finding_id": "sha256:6e44f03ada67e13f29ad564c124160a8d4b7ef756d6febb18ea8f09340db5c20",
+      "method": "GET",
+      "owasp_class": "API7",
+      "path": "/users/v1/_debug",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.missing-authz.no-authorization-header"
+    },
+    {
+      "case_id": "home-policy-unclear",
+      "finding_id": "sha256:36d52e4d6bad062092618dd5c491de98edc36976140b399742ef056f1c2bf368",
+      "method": "GET",
+      "owasp_class": "API1",
+      "path": "/",
+      "replay_identity": "admin",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "home-policy-unclear",
+      "finding_id": "sha256:3eba47a02cd94bc8d75d0735946bc4734134bf0585bbc677f18590e54cf5a940",
+      "method": "GET",
+      "owasp_class": "API1",
+      "path": "/",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "home-policy-unclear",
+      "finding_id": "sha256:497c0069290bc81c8b4914730a0158a8e622a41f0bf53d4ac2b1785bdb2481d5",
+      "method": "GET",
+      "owasp_class": "API3",
+      "path": "/",
+      "replay_identity": "admin",
+      "rule_id": "authz.bopla.excessive-data-exposure"
+    },
+    {
+      "case_id": "home-policy-unclear",
+      "finding_id": "sha256:892fb827f9e6f6da702f81fe981ed44ecb28e9c704d122f1c367564d67baf377",
+      "method": "GET",
+      "owasp_class": "API3",
+      "path": "/",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.bopla.excessive-data-exposure"
+    },
+    {
+      "case_id": "home-policy-unclear",
+      "finding_id": "sha256:0995175e654eb610a5ab722cebc394100eb13cf40cc7e74b5dbe5484006a002f",
+      "method": "GET",
+      "owasp_class": "API7",
+      "path": "/",
+      "replay_identity": "admin",
+      "rule_id": "authz.missing-authz.no-authorization-header"
+    },
+    {
+      "case_id": "home-policy-unclear",
+      "finding_id": "sha256:a2deef32a3efe9e488d2456c59dbd14d89e32c20bb5afc3fbfa862f28a560156",
+      "method": "GET",
+      "owasp_class": "API7",
+      "path": "/",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.missing-authz.no-authorization-header"
+    },
+    {
+      "case_id": "password-change-cross-user",
+      "finding_id": "sha256:10d2ea8d43af2b723f6fab49a8068411c5e1f1e582c674e70389859a092c0fcf",
+      "method": "PUT",
+      "owasp_class": "API1",
+      "path": "/users/v1/charon_eval_bob/password",
+      "replay_identity": "admin",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "password-change-cross-user",
+      "finding_id": "sha256:9ea8cfe2b20ec0f08c14ff16cbdf0d4f1ba1b05345206653e4693c74dc048ab5",
+      "method": "PUT",
+      "owasp_class": "API1",
+      "path": "/users/v1/charon_eval_bob/password",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "user-profile-policy-unclear",
+      "finding_id": "sha256:f95c79503a98549a00e6f508fa213db5cb7c69625dda5a5189ff2b957d0309ce",
+      "method": "GET",
+      "owasp_class": "API1",
+      "path": "/users/v1/charon_eval_alice",
+      "replay_identity": "admin",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "user-profile-policy-unclear",
+      "finding_id": "sha256:a4f9f0ae664e823ba01ea05d9139c9365ba619be51f0bee2d89b4afa9956d795",
+      "method": "GET",
+      "owasp_class": "API1",
+      "path": "/users/v1/charon_eval_alice",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "case_id": "user-profile-policy-unclear",
+      "finding_id": "sha256:b4218fdf8f2fb60d91c32fb9b38eb5991722dd8c88e50f6920cea304489b6e26",
+      "method": "GET",
+      "owasp_class": "API3",
+      "path": "/users/v1/charon_eval_alice",
+      "replay_identity": "admin",
+      "rule_id": "authz.bopla.excessive-data-exposure"
+    },
+    {
+      "case_id": "user-profile-policy-unclear",
+      "finding_id": "sha256:49673d95ad470a96ce98d54adc9f23a98513b6e142649f1fc3aa41f974cde4e0",
+      "method": "GET",
+      "owasp_class": "API3",
+      "path": "/users/v1/charon_eval_alice",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.bopla.excessive-data-exposure"
+    },
+    {
+      "case_id": "user-profile-policy-unclear",
+      "finding_id": "sha256:dcb9ea0bb861d0a2a5ae803181b3fc2bf0f94842ff213a5fc73bf079c249e028",
+      "method": "GET",
+      "owasp_class": "API7",
+      "path": "/users/v1/charon_eval_alice",
+      "replay_identity": "admin",
+      "rule_id": "authz.missing-authz.no-authorization-header"
+    },
+    {
+      "case_id": "user-profile-policy-unclear",
+      "finding_id": "sha256:5c1c1bfe5a64065ea9d494c0b0b50768f04c7b3721b9feca9cbf938a3057e14d",
+      "method": "GET",
+      "owasp_class": "API7",
+      "path": "/users/v1/charon_eval_alice",
+      "replay_identity": "charon_eval_bob",
+      "rule_id": "authz.missing-authz.no-authorization-header"
+    }
+  ],
+  "policy_declarations": [
+    {
+      "access": "role-restricted",
+      "allowed_roles": [
+        "admin"
+      ],
+      "description": "Pinned VAmPI README.md:32 and openapi_specs/openapi3.yml:312 declare deletion admin-only; api_views/users.py:206-222 checks the requesting user's admin flag.",
+      "matched_exchange_ids": [
+        "sha256:1424be4ee52c246aa58bf6af168a08e764f776b52e2e7337ba364b8e3100da19"
+      ],
+      "method": "DELETE",
+      "path": "/users/v1/charon_eval_disposable",
+      "policy_path": "/users/v1/{username}",
+      "status": "policy-declared",
+      "suppressed_findings": [
+        {
+          "finding_id": "sha256:12b2be272d98aaeced8fc1e75c2a69ce3a56c9fa3424b81aca457731759ca0ad",
+          "owasp_class": "API5",
+          "rule_id": "authz.bfla.privilege-transition"
+        }
+      ]
+    },
+    {
+      "access": "public",
+      "allowed_roles": [],
+      "description": "Pinned VAmPI README.md:18 says unregistered users can see minimal information about dummy users; README.md:27 and openapi_specs/openapi3.yml:67 identify this basic-information route.",
+      "matched_exchange_ids": [
+        "sha256:89d59f1960ca1be4f3e39f70c8eb03dd2cdc5fc6fa40e82798284919afce5904"
+      ],
+      "method": "GET",
+      "path": "/users/v1",
+      "policy_path": "/users/v1",
+      "status": "policy-declared",
+      "suppressed_findings": [
+        {
+          "finding_id": "sha256:0a8d3c12ecce5eb3ef5430b189bf0af1542eb220464d70fcbd85319346e410a3",
+          "owasp_class": "API7",
+          "rule_id": "authz.missing-authz.no-authorization-header"
+        },
+        {
+          "finding_id": "sha256:2f417f434e8f42935af20104bf1fe7fa2ee7971739a3ef7aaa6d110a2968b2d7",
+          "owasp_class": "API1",
+          "rule_id": "authz.bola.cross-account-object-exposure"
+        },
+        {
+          "finding_id": "sha256:9d3f9d3e7cd129db7c93dafa8436c27ac25cd28032e8e2236cb030b711e661e8",
+          "owasp_class": "API1",
+          "rule_id": "authz.bola.cross-account-object-exposure"
+        },
+        {
+          "finding_id": "sha256:ac03686c7d45a730accd78b8cb828382e4266b80fb11ed8d8237327bbd908c0d",
+          "owasp_class": "API7",
+          "rule_id": "authz.missing-authz.no-authorization-header"
+        }
+      ]
+    }
+  ],
+  "policy_declared_case_count": 2,
+  "policy_declared_cases": [
+    {
+      "access": "role-restricted",
+      "allowed_roles": [
+        "admin"
+      ],
+      "case_id": "admin-only-delete",
+      "method": "DELETE",
+      "path": "/users/v1/charon_eval_disposable",
+      "policy_path": "/users/v1/{username}",
+      "status": "policy-declared",
+      "suppressed_findings": [
+        {
+          "finding_id": "sha256:12b2be272d98aaeced8fc1e75c2a69ce3a56c9fa3424b81aca457731759ca0ad",
+          "owasp_class": "API5",
+          "rule_id": "authz.bfla.privilege-transition"
+        }
+      ]
+    },
+    {
+      "access": "public",
+      "allowed_roles": [],
+      "case_id": "users-list-public",
+      "method": "GET",
+      "path": "/users/v1",
+      "policy_path": "/users/v1",
+      "status": "policy-declared",
+      "suppressed_findings": [
+        {
+          "finding_id": "sha256:0a8d3c12ecce5eb3ef5430b189bf0af1542eb220464d70fcbd85319346e410a3",
+          "owasp_class": "API7",
+          "rule_id": "authz.missing-authz.no-authorization-header"
+        },
+        {
+          "finding_id": "sha256:2f417f434e8f42935af20104bf1fe7fa2ee7971739a3ef7aaa6d110a2968b2d7",
+          "owasp_class": "API1",
+          "rule_id": "authz.bola.cross-account-object-exposure"
+        },
+        {
+          "finding_id": "sha256:9d3f9d3e7cd129db7c93dafa8436c27ac25cd28032e8e2236cb030b711e661e8",
+          "owasp_class": "API1",
+          "rule_id": "authz.bola.cross-account-object-exposure"
+        },
+        {
+          "finding_id": "sha256:ac03686c7d45a730accd78b8cb828382e4266b80fb11ed8d8237327bbd908c0d",
+          "owasp_class": "API7",
+          "rule_id": "authz.missing-authz.no-authorization-header"
+        }
+      ]
+    }
+  ],
+  "python_version": "3.11.2",
+  "raw_report_file": "charon-report.json",
+  "schema_version": 1,
+  "stderr_log_file": "charon-stderr.log",
+  "stdout_log_file": "charon-stdout.log",
+  "target_base_url": "http://127.0.0.1:5000",
+  "tested_case_count": 8,
+  "vampi_commit_hash": "f16052dce83f05847133ec98f01c5193a41de7d8",
+  "vampi_version": "OpenAPI info.version 0.1"
+}

@@ -173,7 +173,11 @@ def _charon_version() -> str:
     return result.stdout.strip()
 
 
-def _api1_findings(report: dict[str, Any], path: str) -> list[dict[str, Any]]:
+def _findings_for_case(
+    report: dict[str, Any],
+    method: str,
+    path: str,
+) -> list[dict[str, Any]]:
     matched = []
     for finding in report.get("findings", []):
         facts = {
@@ -181,8 +185,7 @@ def _api1_findings(report: dict[str, Any], path: str) -> list[dict[str, Any]]:
             for item in finding.get("observed_facts", [])
         }
         if (
-            finding.get("owasp_class") == "API1"
-            and facts.get("method") == "GET"
+            facts.get("method") == method
             and urlsplit(facts.get("url", "")).path == path
         ):
             matched.append(
@@ -370,8 +373,17 @@ def main() -> int:
 
     report_bytes = report_path.read_bytes()
     report = json.loads(report_bytes)
-    api1_findings = _api1_findings(report, case["path"])
+    case_findings = _findings_for_case(report, case["method"], case["path"])
+    api1_findings = [
+        finding
+        for finding in case_findings
+        if finding["owasp_class"] == case["owasp_class"]
+    ]
     detected = bool(api1_findings)
+    findings_by_class: dict[str, int] = {}
+    for finding in report.get("findings", []):
+        owasp_class = str(finding.get("owasp_class", ""))
+        findings_by_class[owasp_class] = findings_by_class.get(owasp_class, 0) + 1
     observations = {
         "health_status_code": health.status_code,
         "unauthenticated_status_code": unauthenticated.status_code,
@@ -402,9 +414,18 @@ def main() -> int:
             "caller": case["caller"],
             "object_owner": case["object_owner"],
             "charon_result": "detected" if detected else "not-detected",
+            "matched_findings": case_findings,
             "matched_api1_findings": api1_findings,
+            "additional_owasp_classes": sorted(
+                {
+                    finding["owasp_class"]
+                    for finding in case_findings
+                    if finding["owasp_class"] != case["owasp_class"]
+                }
+            ),
         },
         "finding_count": report.get("finding_count"),
+        "findings_by_owasp_class": dict(sorted(findings_by_class.items())),
         "api1_finding_count_for_case": len(api1_findings),
         "metrics_note": (
             "Precision/recall are not calculated: this cross-check contains "

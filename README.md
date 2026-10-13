@@ -99,9 +99,10 @@ captures before sharing or committing them.
 
 See the [local VAmPI evaluation](docs/evaluation/SETUP.md), its
 [ground-truth labels](docs/evaluation/ground_truth.json),
-[measured results](docs/evaluation/RESULTS.md), and
-[limitations](docs/evaluation/LIMITATIONS.md). The pinned target is exercised
-by [`run_eval.py`](docs/evaluation/run_eval.py); it refuses non-loopback URLs.
+[measured results](docs/evaluation/RESULTS.md),
+[endpoint-policy comparison and second-API cross-check](docs/evaluation/POLICY_RESULTS.md),
+and [limitations](docs/evaluation/LIMITATIONS.md). The pinned targets are
+exercised by the evaluation runners; they refuse non-loopback URLs.
 
 ## OWASP API Security Top 10 mapping
 

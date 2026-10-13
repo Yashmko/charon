@@ -1,5 +1,10 @@
 # VAmPI evaluation results
 
+These are the original Part 1 VAmPI results. The original raw report and
+metrics are preserved. See the [Part 2 endpoint-policy comparison and
+independent second-API cross-check](POLICY_RESULTS.md) for the additional
+policy-enabled reruns.
+
 ## Run identity
 
 | Item | Recorded value |
