@@ -28,17 +28,21 @@ from charon.report.json_renderer import render_json
 from charon.report.markdown import render_markdown
 from charon.report.model import (
     FindingReport,
+    PolicyDeclarationView,
     Report,
     ReportMode,
+    SuppressedFindingView,
     TraceReferences,
 )
 
 __all__ = [
     "ArtifactIndex",
     "FindingReport",
+    "PolicyDeclarationView",
     "Report",
     "ReportBuilder",
     "ReportMode",
+    "SuppressedFindingView",
     "TraceReferences",
     "render_json",
     "render_markdown",

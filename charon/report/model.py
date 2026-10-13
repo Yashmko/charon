@@ -23,6 +23,8 @@ __all__ = [
     "TraceReferences",
     "AnnotationView",
     "OwnershipView",
+    "SuppressedFindingView",
+    "PolicyDeclarationView",
     "FindingReport",
     "Report",
 ]
@@ -101,6 +103,35 @@ class OwnershipView:
 
 
 @dataclass(frozen=True, slots=True)
+class SuppressedFindingView:
+    """Identity and class of a finding suppressed by a declared policy."""
+
+    finding_id: str
+    rule_id: str
+    owasp_class: str
+
+
+@dataclass(frozen=True, slots=True)
+class PolicyDeclarationView:
+    """An endpoint access declaration matched during this run.
+
+    These entries are not findings. They explain why a matching endpoint was
+    excluded from the findings list and retain the suppressed finding IDs for
+    auditability.
+    """
+
+    method: str
+    path: str
+    policy_path: str
+    access: str
+    allowed_roles: tuple[str, ...]
+    matched_exchange_ids: tuple[str, ...]
+    suppressed_findings: tuple[SuppressedFindingView, ...]
+    description: str = ""
+    status: str = field(default="policy-declared", init=False)
+
+
+@dataclass(frozen=True, slots=True)
 class FindingReport:
     """The fully-resolved, deterministic presentation of one finding."""
 
@@ -126,6 +157,7 @@ class Report:
     findings: tuple[FindingReport, ...]
     ownership: tuple[OwnershipView, ...] = ()
     schema_version: str = field(default=REPORT_SCHEMA_VERSION)
+    policy_declarations: tuple[PolicyDeclarationView, ...] = ()
 
     @property
     def finding_count(self) -> int:

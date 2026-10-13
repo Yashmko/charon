@@ -9,6 +9,7 @@ Usage::
 
     options:
       --credentials FILE      Credentials JSON file
+      --endpoint-policy FILE  Optional public/role-restricted endpoint policies
       --credential SPEC       Inline credential (e.g. "label=bearer:token")
       --output FILE           Output file (default: stdout)
       --format FORMAT         Output format: json, markdown, both (default: json)
@@ -33,6 +34,7 @@ from charon.capture import (
 from charon.model import CapturedExchange
 from charon.pipeline import Pipeline, PipelineConfig
 from charon.pipeline.engine import PipelineResult
+from charon.policy import EndpointAccess, EndpointPolicy, EndpointPolicyConfig
 from charon.replay import ReplayCredential
 from charon.replay import Transport as TransportProtocol
 from charon.report import ReportMode, render_json, render_markdown
@@ -57,7 +59,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "analyze",
         help="Analyze captured traffic for authorization issues.",
         description=(
-            "Run the full Charon pipeline: capture, replay, compare, detect, report. "
+            "Run the full Charon pipeline: capture, replay, compare, detect, "
+            "endpoint policy, report. "
             "Requires a capture file (HAR or JSON) and at least one replay credential."
         ),
     )
@@ -77,6 +80,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "(array of {name, value} objects). "
             "[Recommended for production use; avoids secret exposure via "
             "shell history or process listings.]"
+        ),
+    )
+    analyze.add_argument(
+        "--endpoint-policy",
+        type=str,
+        metavar="FILE",
+        help=(
+            "Optional JSON file declaring intentionally public or "
+            "role-restricted endpoints. Matching findings are reported as "
+            "policy-declared instead of findings."
         ),
     )
     analyze.add_argument(
@@ -222,6 +235,86 @@ def _load_credentials(args: argparse.Namespace) -> list[ReplayCredential]:
     return credentials
 
 
+def _load_endpoint_policy_config(
+    policy_path: str | None,
+) -> EndpointPolicyConfig:
+    """Load optional endpoint declarations from a JSON config file."""
+    if policy_path is None:
+        return EndpointPolicyConfig()
+
+    path = Path(policy_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Endpoint policy file not found: {path}")
+    payload = json.loads(path.read_text("utf-8"))
+    if not isinstance(payload, dict) or set(payload) != {"endpoints"}:
+        raise ValueError(
+            "Endpoint policy file must be a JSON object with only an "
+            "'endpoints' array."
+        )
+    entries = payload["endpoints"]
+    if not isinstance(entries, list):
+        raise ValueError("Endpoint policy 'endpoints' must be an array.")
+
+    allowed_keys = {
+        "method",
+        "path",
+        "access",
+        "allowed_roles",
+        "description",
+    }
+    policies: list[EndpointPolicy] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise ValueError(f"Endpoint policy entry {index} must be an object.")
+        unknown_keys = set(entry) - allowed_keys
+        missing_keys = {"method", "path", "access"} - set(entry)
+        if unknown_keys:
+            raise ValueError(
+                f"Endpoint policy entry {index} has unknown keys: "
+                f"{', '.join(sorted(unknown_keys))}."
+            )
+        if missing_keys:
+            raise ValueError(
+                f"Endpoint policy entry {index} is missing required keys: "
+                f"{', '.join(sorted(missing_keys))}."
+            )
+        if any(not isinstance(entry[key], str) for key in ("method", "path", "access")):
+            raise ValueError(
+                f"Endpoint policy entry {index} method, path, and access "
+                "must be strings."
+            )
+        roles = entry.get("allowed_roles", [])
+        if not isinstance(roles, list) or any(
+            not isinstance(role, str) for role in roles
+        ):
+            raise ValueError(
+                f"Endpoint policy entry {index} allowed_roles must be an "
+                "array of strings."
+            )
+        description = entry.get("description", "")
+        if not isinstance(description, str):
+            raise ValueError(
+                f"Endpoint policy entry {index} description must be a string."
+            )
+        try:
+            policies.append(
+                EndpointPolicy(
+                    method=entry["method"],
+                    path=entry["path"],
+                    access=EndpointAccess(entry["access"]),
+                    allowed_roles=tuple(roles),
+                    description=description,
+                )
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid endpoint policy entry {index}: {exc}") from exc
+
+    try:
+        return EndpointPolicyConfig(tuple(policies))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid endpoint policy configuration: {exc}") from exc
+
+
 def _load_captures(input_path: str) -> list[dict[str, Any]]:
     """Load capture data from a file.
 
@@ -316,6 +409,12 @@ def main(
         labels = ", ".join(c.label for c in credentials)
         print(f"Loaded {len(credentials)} credential(s): {labels}", file=sys.stderr)
 
+    try:
+        endpoint_policy = _load_endpoint_policy_config(args.endpoint_policy)
+    except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Error loading endpoint policies: {exc}", file=sys.stderr)
+        return 1
+
     # -- Configure and run the pipeline --
     mode = (
         ReportMode.DETERMINISTIC
@@ -326,6 +425,7 @@ def main(
     cfg = PipelineConfig(
         report_mode=mode,
         transport_timeout_seconds=args.timeout,
+        endpoint_policy=endpoint_policy,
     )
 
     if args.verbose:

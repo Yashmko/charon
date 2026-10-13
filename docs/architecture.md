@@ -37,8 +37,9 @@ The codebase splits into a **deterministic core** and an **advisory layer**, sep
 - `replay` — Re-issues requests under varied identities/contexts. Produces `ReplayResult`s. Target nondeterminism is captured and flagged, not hidden.
 - `compare` — Normalizes and diffs responses (status, headers, body, access decision). Emits structured `Comparison` artifacts.
 - `detect` — Authorization rule engine. The sole authority that creates `Finding`s.
+- `policy` — Applies optional caller-declared endpoint policies after detection. Matching findings are suppressed and represented as `policy-declared` report entries; an empty policy config is a no-op.
 - `evidence` — Assembles the evidence chain for each finding and computes stable content-addressed IDs.
-- `report` — Renders findings + evidence. Has a mode switch to include or exclude all `Inferred` content.
+- `report` — Renders unsuppressed findings, evidence, and policy declarations. Has a mode switch to include or exclude all `Inferred` content.
 
 ### Advisory layer (optional, LLM-backed)
 
@@ -139,7 +140,9 @@ Each module is considered correct for v1 only if it meets these criteria.
 - Attaches annotations by reference only; partial or failed enrichment leaves the finding set intact.
 
 ### `pipeline`
-- Seals the finding set before any enrichment runs.
+- Applies optional endpoint policy declarations after deterministic detection and before report assembly.
+- Suppressed findings are listed as policy-declared audit entries, not as findings; the empty default preserves existing behavior.
+- Seals the post-policy finding set before any enrichment runs.
 - Completes successfully whether or not the LLM is available.
 
 ## Failure modes when the LLM is unavailable

@@ -39,6 +39,13 @@ class TestArgParser:
         )
         assert ns.credentials == "creds.json"
 
+    def test_analyze_with_endpoint_policy_file(self) -> None:
+        parser = build_arg_parser()
+        ns = parser.parse_args(
+            ["analyze", "input.json", "--endpoint-policy", "policy.json"]
+        )
+        assert ns.endpoint_policy == "policy.json"
+
     def test_analyze_with_inline_credential(self) -> None:
         parser = build_arg_parser()
         ns = parser.parse_args([
@@ -147,6 +154,65 @@ class TestMain:
 
         assert exit_code == 0
 
+    def test_analyze_with_endpoint_policy_file(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        capture_path = self._write_capture_json(
+            [
+                {
+                    "account_label": "userA",
+                    "method": "GET",
+                    "url": "https://api.example.test/api/invoices/8821",
+                    "status_code": 200,
+                    "response": {
+                        "body": '{"id": 8821, "owner": "userA"}',
+                    },
+                }
+            ]
+        )
+        policy_path = tmp_path / "endpoint-policy.json"
+        policy_path.write_text(
+            json.dumps(
+                {
+                    "endpoints": [
+                        {
+                            "method": "GET",
+                            "path": "/api/invoices/{invoice_id}",
+                            "access": "public",
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        transport = StubTransport(
+            response=TransportResponse(
+                status_code=200,
+                body=b'{"id": 8821, "owner": "userA"}',
+            )
+        )
+        try:
+            exit_code = main(
+                [
+                    "analyze",
+                    capture_path,
+                    "--credential",
+                    "userB=bearer:tok-b",
+                    "--endpoint-policy",
+                    str(policy_path),
+                ],
+                transport=transport,
+            )
+        finally:
+            Path(capture_path).unlink(missing_ok=True)
+
+        assert exit_code == 0
+        report = json.loads(capsys.readouterr().out)
+        assert report["findings"] == []
+        assert report["policy_declarations"][0]["status"] == "policy-declared"
+
     def test_analyze_missing_input_file(self) -> None:
         """Missing input file should exit with error."""
         exit_code = main([
@@ -217,6 +283,47 @@ class TestCredentialParsing:
 
         with pytest.raises(ValueError):
             _parse_inline_credential("=bearer:token")
+
+
+class TestEndpointPolicyLoading:
+    def test_loads_endpoint_policy_file(self, tmp_path: Path) -> None:
+        from charon.cli.main import _load_endpoint_policy_config
+
+        policy_file = tmp_path / "endpoint-policy.json"
+        policy_file.write_text(
+            json.dumps(
+                {
+                    "endpoints": [
+                        {
+                            "method": "get",
+                            "path": "/reports/{report_id}",
+                            "access": "role-restricted",
+                            "allowed_roles": ["admin"],
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        config = _load_endpoint_policy_config(str(policy_file))
+
+        assert config.match("GET", "/reports/17") is config.policies[0]
+        assert config.policies[0].allowed_roles == ("admin",)
+
+    def test_empty_policy_option_is_a_noop(self) -> None:
+        from charon.cli.main import _load_endpoint_policy_config
+
+        assert _load_endpoint_policy_config(None).policies == ()
+
+    def test_rejects_invalid_policy_file(self, tmp_path: Path) -> None:
+        from charon.cli.main import _load_endpoint_policy_config
+
+        policy_file = tmp_path / "invalid-policy.json"
+        policy_file.write_text('{"endpoints":[{"method":"GET"}]}', encoding="utf-8")
+
+        with pytest.raises(ValueError, match="missing required keys"):
+            _load_endpoint_policy_config(str(policy_file))
 
     def test_missing_equal_sign_raises(self) -> None:
         import pytest

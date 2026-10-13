@@ -345,6 +345,29 @@ def _summarize(
     observation_by_case = {
         item["case_id"]: item for item in observations
     }
+    policy_declarations = report.get("policy_declarations", [])
+    policy_declared_case_ids: set[str] = set()
+    policy_declared_cases: list[dict[str, Any]] = []
+    for declaration in policy_declarations:
+        method = str(declaration.get("method", ""))
+        path = str(declaration.get("path", ""))
+        case = case_by_key.get((method, path))
+        case_id = case["id"] if case is not None else None
+        if case_id is not None:
+            policy_declared_case_ids.add(case_id)
+        policy_declared_cases.append(
+            {
+                "case_id": case_id,
+                "status": declaration.get("status"),
+                "method": method,
+                "path": path,
+                "policy_path": declaration.get("policy_path"),
+                "access": declaration.get("access"),
+                "allowed_roles": declaration.get("allowed_roles", []),
+                "suppressed_findings": declaration.get("suppressed_findings", []),
+            }
+        )
+
     case_results: list[dict[str, Any]] = []
     for case in executed_cases:
         observation = observation_by_case.get(case["id"])
@@ -360,6 +383,11 @@ def _summarize(
                 "expected_result": case["expected_result"],
                 "expected_owasp_classes": case["expected_owasp_classes"],
                 "included_in_metrics": case in metric_cases,
+                "policy_status": (
+                    "policy-declared"
+                    if case["id"] in policy_declared_case_ids
+                    else None
+                ),
                 "baseline_status_code": observation["baseline_status_code"],
                 "observed_owasp_classes": sorted(predictions[case["id"]]),
             }
@@ -442,6 +470,9 @@ def _summarize(
         "tested_case_count": len(executed_cases),
         "metric_case_count": len(metric_cases),
         "inconclusive_case_count": len(inconclusive_cases),
+        "policy_declared_case_count": len(policy_declared_case_ids),
+        "policy_declared_cases": policy_declared_cases,
+        "policy_declarations": policy_declarations,
         "case_results": case_results,
         "observed_findings": sorted(
             observed_findings,
@@ -481,12 +512,27 @@ def main() -> int:
         help="Directory for raw Charon JSON and the exact-count run summary.",
     )
     parser.add_argument(
+        "--endpoint-policy",
+        type=Path,
+        help="Optional Charon endpoint-policy JSON file passed through to analyze.",
+    )
+    parser.add_argument(
         "--timeout",
         type=float,
         default=8.0,
         help="Timeout for VAmPI setup/capture HTTP requests (default: 8 seconds).",
     )
     args = parser.parse_args()
+
+    endpoint_policy_path = args.endpoint_policy
+    if endpoint_policy_path is not None:
+        if not endpoint_policy_path.is_absolute():
+            endpoint_policy_path = REPO_ROOT / endpoint_policy_path
+        endpoint_policy_path = endpoint_policy_path.resolve()
+        if not endpoint_policy_path.is_file():
+            raise SystemExit(
+                f"Endpoint policy file not found: {endpoint_policy_path}"
+            )
 
     base_url = _local_base_url(args.base_url)
     vampi_dir = args.vampi_dir.resolve()
@@ -685,6 +731,8 @@ def main() -> int:
             str(report_path),
             "--verbose",
         ]
+        if endpoint_policy_path is not None:
+            command.extend(["--endpoint-policy", str(endpoint_policy_path)])
         result = subprocess.run(
             command,
             cwd=REPO_ROOT,
@@ -706,6 +754,18 @@ def main() -> int:
         )
 
     summary = _summarize(ground_truth, report, observations)
+    charon_command = [
+        "python -m charon analyze <temporary-captures.json>",
+        "--credentials <temporary-credentials.json>",
+        "--format json",
+        "--mode deterministic",
+        "--output <output-dir>/charon-report.json",
+        "--verbose",
+    ]
+    if endpoint_policy_path is not None:
+        charon_command.extend(
+            ["--endpoint-policy", endpoint_policy_path.name]
+        )
     summary.update(
         {
             "charon_version": charon_version,
@@ -717,14 +777,10 @@ def main() -> int:
             "database_reset_attempts": reset_attempts,
             "python_version": platform.python_version(),
             "mode": "deterministic",
-            "charon_command": [
-                "python -m charon analyze <temporary-captures.json>",
-                "--credentials <temporary-credentials.json>",
-                "--format json",
-                "--mode deterministic",
-                "--output docs/evaluation/raw/charon-report.json",
-                "--verbose",
-            ],
+            "charon_command": charon_command,
+            "endpoint_policy_file": (
+                endpoint_policy_path.name if endpoint_policy_path is not None else None
+            ),
             "baseline_observations": observations,
             "raw_report_file": report_path.name,
             "stderr_log_file": stderr_path.name,

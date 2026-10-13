@@ -79,6 +79,28 @@ def render_json(report: Report) -> str:
         ],
         "findings": [_finding_dict(f) for f in report.findings],
     }
+    if report.policy_declarations:
+        payload["policy_declarations"] = [
+            {
+                "status": declaration.status,
+                "method": declaration.method,
+                "path": declaration.path,
+                "policy_path": declaration.policy_path,
+                "access": declaration.access,
+                "allowed_roles": list(declaration.allowed_roles),
+                "description": declaration.description,
+                "matched_exchange_ids": list(declaration.matched_exchange_ids),
+                "suppressed_findings": [
+                    {
+                        "finding_id": finding.finding_id,
+                        "rule_id": finding.rule_id,
+                        "owasp_class": finding.owasp_class,
+                    }
+                    for finding in declaration.suppressed_findings
+                ],
+            }
+            for declaration in report.policy_declarations
+        ]
     return json.dumps(
         payload,
         sort_keys=True,

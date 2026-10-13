@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 
 from charon.report import (
+    PolicyDeclarationView,
     ReportBuilder,
     ReportMode,
+    SuppressedFindingView,
     render_json,
     render_markdown,
 )
@@ -82,3 +84,60 @@ def test_deterministic_mode_json_has_no_annotations(chain: Chain) -> None:
     )
     assert "advisory text" not in render_json(report)
     assert "advisory text" not in render_markdown(report)
+
+
+def test_empty_report_without_policy_keeps_legacy_shape() -> None:
+    report = ReportBuilder().build([])
+    data = json.loads(render_json(report))
+
+    assert "policy_declarations" not in data
+    assert "Policy-declared endpoints" not in render_markdown(report)
+
+
+def test_policy_declaration_is_reported_separately_from_findings() -> None:
+    declaration = PolicyDeclarationView(
+        method="GET",
+        path="/status",
+        policy_path="/status",
+        access="public",
+        allowed_roles=(),
+        matched_exchange_ids=("sha256:exchange",),
+        suppressed_findings=(
+            SuppressedFindingView(
+                finding_id="sha256:suppressed",
+                rule_id="authz.bola.cross-account-object-exposure",
+                owasp_class="API1",
+            ),
+        ),
+    )
+    report = ReportBuilder().build([], policy_declarations=(declaration,))
+
+    data = json.loads(render_json(report))
+    assert data["finding_count"] == 0
+    assert data["findings"] == []
+    assert data["policy_declarations"][0]["status"] == "policy-declared"
+    assert data["policy_declarations"][0]["suppressed_findings"][0]["rule_id"] == (
+        "authz.bola.cross-account-object-exposure"
+    )
+    markdown = render_markdown(report)
+    assert "Policy-declared endpoints" in markdown
+    assert "`policy-declared`" in markdown
+    assert "_No findings._" in markdown
+
+
+def test_policy_declarations_are_stable_in_both_report_modes() -> None:
+    declaration = PolicyDeclarationView(
+        method="GET",
+        path="/status",
+        policy_path="/status",
+        access="public",
+        allowed_roles=(),
+        matched_exchange_ids=(),
+        suppressed_findings=(),
+    )
+    for mode in (ReportMode.DETERMINISTIC, ReportMode.ENRICHED):
+        report = ReportBuilder().build([], mode=mode, policy_declarations=[declaration])
+        assert render_json(report) == render_json(report)
+        assert render_markdown(report) == render_markdown(report)
+        assert "policy-declared" in render_json(report)
+        assert "policy-declared" in render_markdown(report)

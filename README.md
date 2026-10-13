@@ -11,7 +11,7 @@ LLM enrichment is optional by design and must never create or suppress findings.
 ## Pipeline
 
 ```text
-capture → replay → compare → detect → report
+capture → replay → compare → detect → endpoint policy → report
 ```
 
 | Module | Capability |
@@ -21,6 +21,7 @@ capture → replay → compare → detect → report
 | `replay` | HTTP replay using bearer tokens, cookies, API keys, or custom headers |
 | `compare` | Deterministic response comparison and volatile-field suppression |
 | `detect` | BOLA, BFLA, BOPLA, missing-authorization signals, and matrix analysis |
+| `policy` | Optional explicit declarations for public or role-restricted endpoints |
 | `report` | Deterministic JSON and Markdown reports with evidence traceability |
 | `pipeline` / `cli` | Stage orchestration and `charon analyze` command |
 
@@ -59,6 +60,16 @@ can expose inline values.
 
 Formats: `json`, `markdown`, and `both`. The CLI also supports
 `charon version`; run `charon analyze --help` for options.
+
+### Optional endpoint policies
+
+Declare intentionally public or role-restricted routes with an optional JSON
+file passed using `--endpoint-policy`. Matching findings are suppressed from
+the findings list and reported separately with status `policy-declared`. With
+no policy file, existing findings and report output are unchanged. Role names
+are recorded as declarations; Charon does not verify that the target enforces
+them. See [`docs/endpoint-policies.md`](docs/endpoint-policies.md) for the
+schema, examples, and suppression caveats.
 
 ## Development
 

@@ -9,7 +9,12 @@ separate section.
 
 from __future__ import annotations
 
-from charon.report.model import FindingReport, ProvenancedFact, Report
+from charon.report.model import (
+    FindingReport,
+    PolicyDeclarationView,
+    ProvenancedFact,
+    Report,
+)
 
 __all__ = ["render_markdown"]
 
@@ -103,6 +108,43 @@ def _finding_section(finding: FindingReport) -> list[str]:
     return lines
 
 
+def _policy_declaration_lines(
+    declaration: PolicyDeclarationView,
+) -> list[str]:
+    roles = (
+        ", ".join(f"`{role}`" for role in declaration.allowed_roles)
+        if declaration.allowed_roles
+        else "_none_"
+    )
+    exchanges = (
+        ", ".join(
+            f"`{exchange_id}`" for exchange_id in declaration.matched_exchange_ids
+        )
+        if declaration.matched_exchange_ids
+        else "_none_"
+    )
+    lines = [
+        f"### `{declaration.method} {declaration.path}`",
+        "",
+        f"- **Status:** `{declaration.status}`",
+        f"- **Access policy:** `{declaration.access}`",
+        f"- **Matched template:** `{declaration.policy_path}`",
+        f"- **Allowed roles:** {roles}",
+        f"- **Matched exchanges:** {exchanges}",
+    ]
+    if declaration.description:
+        lines.append(f"- **Description:** {declaration.description}")
+    if declaration.suppressed_findings:
+        lines.append("- **Suppressed findings:**")
+        lines.extend(
+            f"  - `{finding.finding_id}` — `{finding.rule_id}` ({finding.owasp_class})"
+            for finding in declaration.suppressed_findings
+        )
+    else:
+        lines.append("- **Suppressed findings:** _none_")
+    return lines
+
+
 def render_markdown(report: Report) -> str:
     """Render ``report`` as a deterministic Markdown string."""
     lines = [
@@ -113,6 +155,21 @@ def render_markdown(report: Report) -> str:
         f"- **Findings:** {report.finding_count}",
         "",
     ]
+    if report.policy_declarations:
+        lines.extend(
+            [
+                "## Policy-declared endpoints",
+                "",
+                (
+                    "Matching findings were excluded from the findings list "
+                    "under the explicit declarations below."
+                ),
+                "",
+            ]
+        )
+        for declaration in report.policy_declarations:
+            lines.extend(_policy_declaration_lines(declaration))
+            lines.append("")
     if not report.findings:
         lines.append("_No findings._")
         return "\n".join(lines) + "\n"
