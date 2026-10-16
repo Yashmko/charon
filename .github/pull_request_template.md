@@ -6,7 +6,7 @@
 
 - [ ] `pytest`
 - [ ] `ruff check .`
-- [ ] `mypy .`
+- [ ] `mypy`
 - [ ] Local/authorized test target only; no unapproved live testing
 - [ ] No credentials, raw sensitive captures, or private customer data added
 

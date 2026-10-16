@@ -77,7 +77,7 @@ schema, examples, and suppression caveats.
 python -m pip install -e ".[dev]"
 pytest
 ruff check .
-mypy .
+mypy
 ```
 
 ## Validation and trust boundaries
