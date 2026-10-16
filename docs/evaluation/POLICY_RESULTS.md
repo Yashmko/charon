@@ -156,8 +156,9 @@ successfully. The preserved Part 1 and Part 2 summaries were recalculated from
 the unchanged historical raw reports; their report hashes were verified
 unchanged. A fresh target evaluation was not available in this environment:
 neither pinned target checkout nor its loopback server was present. Python 3.12
-was also unavailable locally; CI results for the pushed changes are tracked
-separately.
+was unavailable locally; PR CI run `38862388001` passed the Python 3.11 and 3.12
+test, lint, and type-check jobs. CI reported only the existing non-blocking
+Node.js 20 deprecation and Ubuntu runner-migration notices.
 
 ## Reproduce
 
