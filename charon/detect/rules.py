@@ -33,7 +33,8 @@ class RuleMatch:
     """A single rule's deterministic verdict that a finding is warranted.
 
     :param rule_id: Stable identifier of the rule that matched.
-    :param owasp_class: OWASP API class for the finding.
+    :param owasp_class: Official OWASP class or explicitly scoped internal
+        classification for the finding.
     :param severity: Severity assigned by the rule (fixed per rule; never
         inflated by the engine).
     :param subject: Deterministic, provenance-tagged identifiers describing

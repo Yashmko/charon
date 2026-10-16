@@ -1,0 +1,19 @@
+{
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/users/v1",
+      "access": "public",
+      "description": "Operator-declared public route based on README.md:18, README.md:27, and openapi_specs/openapi3.yml:67. This does not establish that runner-created accounts or their email addresses are within the intended public-data scope and is not ground-truth evidence for users-list-public."
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/v1/{username}",
+      "access": "role-restricted",
+      "allowed_roles": [
+        "admin"
+      ],
+      "description": "Pinned VAmPI README.md:32 and openapi_specs/openapi3.yml:312 declare deletion admin-only; api_views/users.py:206-222 checks the requesting user's admin flag."
+    }
+  ]
+}

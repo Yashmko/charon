@@ -1,0 +1,5 @@
+Loaded 1 exchange(s).
+Loaded 1 credential(s): bob
+Running pipeline...
+Found 2 finding(s).
+Report written to /home/user/charon/docs/evaluation/raw/second-api/charon-report.json

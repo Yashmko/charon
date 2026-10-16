@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from charon.compare import ComparisonConfig
 from charon.detect import RuleConfig
 from charon.ownership import OwnershipConfig
+from charon.policy import EndpointPolicyConfig
 from charon.report import ReportMode
 
 __all__ = ["PipelineConfig"]
@@ -33,6 +34,8 @@ class PipelineConfig:
         replay transport.
     :param transport_follow_redirects: Whether the transport should follow
         redirects during replay.
+    :param endpoint_policy: Explicit endpoint declarations for intentionally
+        public or role-restricted access. Empty by default.
     """
 
     comparison: ComparisonConfig = field(default_factory=ComparisonConfig)
@@ -41,3 +44,6 @@ class PipelineConfig:
     report_mode: ReportMode = ReportMode.DETERMINISTIC
     transport_timeout_seconds: float = 30.0
     transport_follow_redirects: bool = False
+    endpoint_policy: EndpointPolicyConfig = field(
+        default_factory=EndpointPolicyConfig
+    )

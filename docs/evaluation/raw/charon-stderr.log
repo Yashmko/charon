@@ -1,0 +1,5 @@
+Loaded 8 exchange(s).
+Loaded 2 credential(s): charon_eval_bob, admin
+Running pipeline...
+Found 27 finding(s).
+Report written to /home/user/charon/docs/evaluation/raw/charon-report.json

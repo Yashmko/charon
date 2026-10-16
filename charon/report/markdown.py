@@ -9,7 +9,12 @@ separate section.
 
 from __future__ import annotations
 
-from charon.report.model import FindingReport, ProvenancedFact, Report
+from charon.report.model import (
+    FindingReport,
+    PolicyDeclarationView,
+    ProvenancedFact,
+    Report,
+)
 
 __all__ = ["render_markdown"]
 
@@ -53,13 +58,22 @@ def _field_diff_lines(finding: FindingReport) -> list[str]:
     return lines
 
 
+def _classification_text(classification_scope: str, code: str) -> str:
+    if classification_scope == "internal":
+        return f"{code} (internal Charon heuristic; not an OWASP category)"
+    return f"OWASP API Security Top 10 (2023) {code}"
+
+
 def _finding_section(finding: FindingReport) -> list[str]:
+    classification = _classification_text(
+        finding.classification_scope, finding.classification
+    )
     lines = [
         f"## {finding.title}",
         "",
         f"- **Finding ID:** `{finding.finding_id}`",
         f"- **Rule:** `{finding.rule_id}`",
-        f"- **OWASP:** {finding.owasp_class}",
+        f"- **Classification:** {classification}",
         f"- **Severity:** {finding.severity}",
         f"- **Confidence:** {finding.confidence:.2f}",
         "",
@@ -103,6 +117,47 @@ def _finding_section(finding: FindingReport) -> list[str]:
     return lines
 
 
+def _policy_declaration_lines(
+    declaration: PolicyDeclarationView,
+) -> list[str]:
+    roles = (
+        ", ".join(f"`{role}`" for role in declaration.allowed_roles)
+        if declaration.allowed_roles
+        else "_none_"
+    )
+    exchanges = (
+        ", ".join(
+            f"`{exchange_id}`" for exchange_id in declaration.matched_exchange_ids
+        )
+        if declaration.matched_exchange_ids
+        else "_none_"
+    )
+    lines = [
+        f"### `{declaration.method} {declaration.path}`",
+        "",
+        f"- **Status:** `{declaration.status}`",
+        f"- **Access policy:** `{declaration.access}`",
+        f"- **Matched template:** `{declaration.policy_path}`",
+        f"- **Allowed roles:** {roles}",
+        f"- **Matched exchanges:** {exchanges}",
+    ]
+    if declaration.description:
+        lines.append(f"- **Description:** {declaration.description}")
+    if declaration.suppressed_findings:
+        lines.append("- **Suppressed findings:**")
+        for finding in declaration.suppressed_findings:
+            classification = _classification_text(
+                finding.classification_scope, finding.classification
+            )
+            lines.append(
+                f"  - `{finding.finding_id}` — `{finding.rule_id}` "
+                f"({classification})"
+            )
+    else:
+        lines.append("- **Suppressed findings:** _none_")
+    return lines
+
+
 def render_markdown(report: Report) -> str:
     """Render ``report`` as a deterministic Markdown string."""
     lines = [
@@ -113,6 +168,21 @@ def render_markdown(report: Report) -> str:
         f"- **Findings:** {report.finding_count}",
         "",
     ]
+    if report.policy_declarations:
+        lines.extend(
+            [
+                "## Policy-declared endpoints",
+                "",
+                (
+                    "Matching findings were excluded from the findings list "
+                    "under the explicit declarations below."
+                ),
+                "",
+            ]
+        )
+        for declaration in report.policy_declarations:
+            lines.extend(_policy_declaration_lines(declaration))
+            lines.append("")
     if not report.findings:
         lines.append("_No findings._")
         return "\n".join(lines) + "\n"

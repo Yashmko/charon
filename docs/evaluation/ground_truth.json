@@ -1,0 +1,593 @@
+{
+  "schema_version": 2,
+  "target": {
+    "name": "VAmPI",
+    "repository": "https://github.com/erev0s/VAmPI",
+    "revision": "f16052dce83f05847133ec98f01c5193a41de7d8",
+    "openapi_version": "0.1",
+    "mode": "vulnerable=1",
+    "label_scope": "Labels are for the specific authorization test case, not a claim that an endpoint has no other vulnerability. A documented vulnerable case can have evaluation_status=not_tested when Charon's deterministic replay cannot exercise that vulnerability class."
+  },
+  "evaluation_classes": [
+    {
+      "classification": "API1",
+      "classification_scope": "owasp-api-security-top-10-2023",
+      "name": "BOLA",
+      "rule_id": "authz.bola.cross-account-object-exposure"
+    },
+    {
+      "classification": "API3",
+      "classification_scope": "owasp-api-security-top-10-2023",
+      "name": "BOPLA",
+      "rule_id": "authz.bopla.excessive-data-exposure"
+    },
+    {
+      "classification": "API5",
+      "classification_scope": "owasp-api-security-top-10-2023",
+      "name": "BFLA",
+      "rule_id": "authz.bfla.privilege-transition"
+    },
+    {
+      "classification": "internal:missing-authorization",
+      "classification_scope": "internal",
+      "legacy_report_code": "API7",
+      "name": "Missing-authorization signal (internal Charon heuristic; not an OWASP category)",
+      "rule_id": "authz.missing-authz.no-authorization-header"
+    }
+  ],
+  "counting": {
+    "unit": "one (test case, evaluation class) pair; classes identify their OWASP or internal scope",
+    "positive_rule": "A case is positive for an official OWASP class only when that class is listed in expected_owasp_classes. No source-labeled positive case is assigned to the internal missing-authorization heuristic.",
+    "negative_rule": "For each tested vulnerable or not_vulnerable case, every evaluation class not listed in expected_owasp_classes is a negative. A finding of that class on a negative case is a false positive, including a wrong-class finding on a case vulnerable to a different class.",
+    "deduplication": "Multiple findings of the same evaluation class for one case (for example, one per replay identity) count once. Inconclusive and not_tested cases are excluded from measured metrics.",
+    "ratios": "Precision and recall are exact fractions; a zero denominator is N/A."
+  },
+  "cases": [
+    {
+      "id": "home-policy-unclear",
+      "method": "GET",
+      "endpoint": "/",
+      "path": "/",
+      "expected_result": "inconclusive",
+      "vulnerability_class": "Access-control policy unspecified for the VAmPI home response",
+      "expected_owasp_classes": [],
+      "evaluation_status": "tested",
+      "baseline_status_code": 200,
+      "source_label": [
+        {
+          "document": "README.md",
+          "line": 25,
+          "quote": "|     GET    |               /               |                     VAmPI home                     |",
+          "reference": "Actions table, GET /",
+          "label": "Names the operation as VAmPI home; no access policy stated"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 38,
+          "quote": "      summary: VAmPI home",
+          "reference": "paths['/'].get",
+          "label": "Names the operation as VAmPI home; no access policy stated"
+        }
+      ],
+      "label_rationale": "The pinned README/OpenAPI identify the route as VAmPI home but do not state whether its access is intentionally public. It is therefore inconclusive, not a not_vulnerable negative control."
+    },
+    {
+      "id": "users-list-public",
+      "method": "GET",
+      "endpoint": "/users/v1",
+      "path": "/users/v1",
+      "expected_result": "inconclusive",
+      "vulnerability_class": "Public user-list access; intended data scope is unclear",
+      "expected_owasp_classes": [],
+      "evaluation_status": "tested",
+      "baseline_status_code": 200,
+      "source_label": [
+        {
+          "document": "README.md",
+          "line": 18,
+          "quote": "VAmPI's flow of actions is going like this: an unregistered user can see minimal information about the dummy users included in the API. A user can register and then login to be allowed using the token received during login to post a book. For a book posted the data accepted are the title and a secret about that book. Each book is unique for every user and only the owner of the book should be allowed to view the secret.",
+          "reference": "VAmPI flow of actions",
+          "label": "Says unregistered users can see minimal information about dummy users"
+        },
+        {
+          "document": "README.md",
+          "line": 27,
+          "quote": "|     GET    |           /users/v1           |      Displays all users with basic information     |",
+          "reference": "Actions table, GET /users/v1",
+          "label": "Documents the basic user-list operation"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 67,
+          "quote": "      description: Displays all users with basic information",
+          "reference": "paths['/users/v1'].get",
+          "label": "Documents the basic-information response"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 71,
+          "quote": "          description: See basic info about all users",
+          "reference": "paths['/users/v1'].get.responses['200']",
+          "label": "Documents the basic-information response"
+        }
+      ],
+      "label_rationale": "The README documents public access to minimal information about dummy users, but this runner registers Alice, Bob, and a disposable synthetic account before the unauthenticated list request. At the pinned revision, the list returns every database user, including those newly created accounts and their email addresses. The documentation does not establish that these evaluation-created records are within the intended public-data scope, nor does it classify their exposure as a vulnerability. This case is therefore inconclusive rather than a not_vulnerable negative control."
+    },
+    {
+      "id": "user-profile-policy-unclear",
+      "method": "GET",
+      "endpoint": "/users/v1/{username}",
+      "path": "/users/v1/charon_eval_alice",
+      "expected_result": "inconclusive",
+      "vulnerability_class": "Access policy unspecified for a benign literal lookup of a registered synthetic user",
+      "expected_owasp_classes": [],
+      "evaluation_status": "tested",
+      "baseline_status_code": 200,
+      "source_label": [
+        {
+          "document": "README.md",
+          "line": 18,
+          "quote": "VAmPI's flow of actions is going like this: an unregistered user can see minimal information about the dummy users included in the API. A user can register and then login to be allowed using the token received during login to post a book. For a book posted the data accepted are the title and a secret about that book. Each book is unique for every user and only the owner of the book should be allowed to view the secret.",
+          "reference": "VAmPI flow of actions",
+          "label": "Public-read statement is limited to minimal information about dummy users"
+        },
+        {
+          "document": "README.md",
+          "line": 31,
+          "quote": "|     GET    |      /users/v1/{username}     |              Displays user by username             |",
+          "reference": "Actions table, GET /users/v1/{username}",
+          "label": "Documents the profile lookup, not its access policy"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 267,
+          "quote": "      summary: Retrieves user by username",
+          "reference": "paths['/users/v1/{username}'].get",
+          "label": "Documents the profile operation, not its access policy"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 268,
+          "quote": "      description: Displays user by username",
+          "reference": "paths['/users/v1/{username}'].get",
+          "label": "Documents the profile operation, not its access policy"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 286,
+          "quote": "                  username:",
+          "reference": "paths['/users/v1/{username}'].get.responses['200']",
+          "label": "Documents a username response field"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 289,
+          "quote": "                  email:",
+          "reference": "paths['/users/v1/{username}'].get.responses['200']",
+          "label": "Documents an email response field"
+        }
+      ],
+      "label_rationale": "The README public-access statement is specifically about dummy users; this case queried a newly registered synthetic account. The OpenAPI describes the profile fields but does not state whether this account should be publicly readable, so the source does not support a not_vulnerable label for this exact case."
+    },
+    {
+      "id": "debug-sensitive-data",
+      "method": "GET",
+      "endpoint": "/users/v1/_debug",
+      "path": "/users/v1/_debug",
+      "expected_result": "vulnerable",
+      "vulnerability_class": "Excessive Data Exposure through debug endpoint (VAmPI label; evaluated against Charon API3)",
+      "expected_owasp_classes": [
+        "API3"
+      ],
+      "evaluation_status": "tested",
+      "baseline_status_code": 200,
+      "source_label": [
+        {
+          "document": "README.md",
+          "line": 47,
+          "quote": " - Excessive Data Exposure through debug endpoint",
+          "reference": "List of Vulnerabilities",
+          "label": "VAmPI vulnerability label"
+        },
+        {
+          "document": "README.md",
+          "line": 28,
+          "quote": "|     GET    |        /users/v1/_debug       |         Displays all details for all users         |",
+          "reference": "Actions table, GET /users/v1/_debug",
+          "label": "Identifies the debug endpoint"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 93,
+          "quote": "      description: Displays all details for all users",
+          "reference": "paths['/users/v1/_debug'].get",
+          "label": "Documents all-details response"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 108,
+          "quote": "                        admin:",
+          "reference": "paths['/users/v1/_debug'].get.responses['200']",
+          "label": "Documents the exposed admin field"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 114,
+          "quote": "                        password:",
+          "reference": "paths['/users/v1/_debug'].get.responses['200']",
+          "label": "Documents the exposed password field"
+        }
+      ],
+      "label_rationale": "VAmPI labels this endpoint excessive data exposure. API3/BOPLA is the evaluation mapping to Charon’s rule; VAmPI itself does not attach an OWASP API code to this README item."
+    },
+    {
+      "id": "me-current-user",
+      "method": "GET",
+      "endpoint": "/me",
+      "path": "/me",
+      "expected_result": "not_vulnerable",
+      "vulnerability_class": "None for the valid-token current-user access test (BOLA negative control)",
+      "expected_owasp_classes": [],
+      "evaluation_status": "tested",
+      "baseline_status_code": 200,
+      "source_label": [
+        {
+          "document": "README.md",
+          "line": 26,
+          "quote": "|     GET    |               /me             |           Displays the user that is logged in       |",
+          "reference": "Actions table, GET /me",
+          "label": "Describes current-user access"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 218,
+          "quote": "          - bearerAuth: []",
+          "reference": "paths['/me'].get.security",
+          "label": "Requires bearer authentication"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 222,
+          "quote": "        description: Displays information about the currently authenticated user",
+          "reference": "paths['/me'].get",
+          "label": "Limits the response to the authenticated user"
+        }
+      ],
+      "label_rationale": "For this specific test, valid login-issued tokens return each caller’s own current-user data. The separate weak-signing-key vulnerability is listed as a different, untested case."
+    },
+    {
+      "id": "book-cross-account",
+      "method": "GET",
+      "endpoint": "/books/v1/{book_title}",
+      "path": "/books/v1/charon_eval_alice_book",
+      "expected_result": "vulnerable",
+      "vulnerability_class": "Broken Object Level Authorization (VAmPI label; Charon API1 mapping)",
+      "expected_owasp_classes": [
+        "API1"
+      ],
+      "evaluation_status": "tested",
+      "baseline_status_code": 200,
+      "source_label": [
+        {
+          "document": "README.md",
+          "line": 18,
+          "quote": "VAmPI's flow of actions is going like this: an unregistered user can see minimal information about the dummy users included in the API. A user can register and then login to be allowed using the token received during login to post a book. For a book posted the data accepted are the title and a secret about that book. Each book is unique for every user and only the owner of the book should be allowed to view the secret.",
+          "reference": "VAmPI flow of actions",
+          "label": "Says only the owner should view a book secret"
+        },
+        {
+          "document": "README.md",
+          "line": 45,
+          "quote": " - Broken Object Level Authorization",
+          "reference": "List of Vulnerabilities",
+          "label": "VAmPI vulnerability label"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 593,
+          "quote": "        Retrieves book by title along with secret. Only the owner may retrieve",
+          "reference": "paths['/books/v1/{book_title}'].get",
+          "label": "States the owner-only policy"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 594,
+          "quote": "        it",
+          "reference": "paths['/books/v1/{book_title}'].get",
+          "label": "Completes the owner-only policy statement"
+        }
+      ],
+      "label_rationale": "VAmPI explicitly labels BOLA and says only the book owner should retrieve the secret. API1 is the corresponding Charon evaluation rule."
+    },
+    {
+      "id": "password-change-cross-user",
+      "method": "PUT",
+      "endpoint": "/users/v1/{username}/password",
+      "path": "/users/v1/charon_eval_bob/password",
+      "expected_result": "vulnerable",
+      "vulnerability_class": "Unauthorized Password Change (VAmPI label; evaluated against Charon API1)",
+      "expected_owasp_classes": [
+        "API1"
+      ],
+      "evaluation_status": "tested",
+      "baseline_status_code": 204,
+      "source_label": [
+        {
+          "document": "README.md",
+          "line": 44,
+          "quote": " - Unauthorized Password Change",
+          "reference": "List of Vulnerabilities",
+          "label": "VAmPI vulnerability label"
+        },
+        {
+          "document": "README.md",
+          "line": 34,
+          "quote": "|     PUT    | /users/v1/{username}/password |                Update users password               |",
+          "reference": "Actions table, PUT /users/v1/{username}/password",
+          "label": "Maps the label to the password-update operation"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 432,
+          "quote": "      summary: Update users password",
+          "reference": "paths['/users/v1/{username}/password'].put",
+          "label": "Identifies the password-update operation"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 438,
+          "quote": "          description: username to update password",
+          "reference": "paths['/users/v1/{username}/password'].put.parameters",
+          "label": "Identifies the username path parameter"
+        }
+      ],
+      "label_rationale": "VAmPI lists Unauthorized Password Change. API1 is the evaluation mapping for the captured cross-user username-path operation; VAmPI does not explicitly assign an OWASP code to this individual label."
+    },
+    {
+      "id": "admin-only-delete",
+      "method": "DELETE",
+      "endpoint": "/users/v1/{username}",
+      "path": "/users/v1/charon_eval_disposable",
+      "expected_result": "not_vulnerable",
+      "vulnerability_class": "None; documented admin-only role boundary (BFLA negative control)",
+      "expected_owasp_classes": [],
+      "evaluation_status": "tested",
+      "baseline_status_code": 401,
+      "source_label": [
+        {
+          "document": "README.md",
+          "line": 32,
+          "quote": "|   DELETE   |      /users/v1/{username}     |       Deletes user by username (Only Admins)       |",
+          "reference": "Actions table, DELETE /users/v1/{username}",
+          "label": "States that only admins may delete users"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 312,
+          "quote": "      summary: Deletes user by username (Only Admins)",
+          "reference": "paths['/users/v1/{username}'].delete",
+          "label": "States the admin-only operation"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 313,
+          "quote": "      description: Deletes user by username (Only Admins)",
+          "reference": "paths['/users/v1/{username}'].delete",
+          "label": "States the admin-only operation"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "line": 351,
+          "quote": "                    example: 'Only Admins may delete users!'",
+          "reference": "paths['/users/v1/{username}'].delete.responses['401']",
+          "label": "Documents non-admin denial"
+        }
+      ],
+      "label_rationale": "The source explicitly describes deletion as admin-only and documents a 401 response with the non-admin denial message; the Alice-denied/admin-allowed transition is therefore an intended role boundary."
+    },
+    {
+      "id": "user-lookup-sqli",
+      "method": "GET",
+      "endpoint": "/users/v1/{username}",
+      "path": "/users/v1/charon_eval_alice",
+      "expected_result": "vulnerable",
+      "vulnerability_class": "SQL injection (VAmPI README label)",
+      "expected_owasp_classes": [],
+      "evaluation_status": "not_tested",
+      "not_tested_reason": "The evaluated request uses a benign literal username. Charon's deterministic authorization replay does not mutate path parameters or run SQL injection probes.",
+      "source_label": [
+        {
+          "document": "README.md",
+          "reference": "List of Vulnerabilities",
+          "label": "SQLi Injection"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "reference": "paths['/users/v1/{username}'].get / operationId api_views.users.get_by_username",
+          "label": "Username is supplied as a path parameter"
+        }
+      ]
+    },
+    {
+      "id": "registration-mass-assignment",
+      "method": "POST",
+      "endpoint": "/users/v1/register",
+      "path": "/users/v1/register",
+      "expected_result": "vulnerable",
+      "vulnerability_class": "Mass Assignment (BOPLA/API3 mapping)",
+      "expected_owasp_classes": [
+        "API3"
+      ],
+      "evaluation_status": "not_tested",
+      "not_tested_reason": "Registration is state-changing and Charon replays the captured body unchanged; it does not vary request properties such as admin.",
+      "source_label": [
+        {
+          "document": "README.md",
+          "reference": "List of Vulnerabilities",
+          "label": "Mass Assignment"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "reference": "paths['/users/v1/register'].post / operationId api_views.users.register_user",
+          "label": "User registration request body"
+        }
+      ]
+    },
+    {
+      "id": "login-enumeration",
+      "method": "POST",
+      "endpoint": "/users/v1/login",
+      "path": "/users/v1/login",
+      "expected_result": "vulnerable",
+      "vulnerability_class": "User and Password Enumeration",
+      "expected_owasp_classes": [],
+      "evaluation_status": "not_tested",
+      "not_tested_reason": "Enumeration requires comparing distinct username/password guesses; this evaluation keeps request bodies fixed and tests identity replay only.",
+      "source_label": [
+        {
+          "document": "README.md",
+          "reference": "List of Vulnerabilities",
+          "label": "User and Password Enumeration"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "reference": "paths['/users/v1/login'].post / operationId api_views.users.login_user",
+          "label": "Login request body takes username and password"
+        }
+      ]
+    },
+    {
+      "id": "email-regexdos",
+      "method": "PUT",
+      "endpoint": "/users/v1/{username}/email",
+      "path": "/users/v1/charon_eval_alice/email",
+      "expected_result": "vulnerable",
+      "vulnerability_class": "RegexDOS (denial of service)",
+      "expected_owasp_classes": [],
+      "evaluation_status": "not_tested",
+      "not_tested_reason": "No pathological email input was sent; deliberately triggering a regex denial of service is outside this authorization evaluation and could stall the target process.",
+      "source_label": [
+        {
+          "document": "README.md",
+          "reference": "List of Vulnerabilities",
+          "label": "RegexDOS (Denial of Service)"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "reference": "paths['/users/v1/{username}/email'].put / operationId api_views.users.update_email",
+          "label": "Email update accepts email in a JSON request body"
+        }
+      ]
+    },
+    {
+      "id": "weak-jwt-signing-key",
+      "method": "GET",
+      "endpoint": "/me",
+      "path": "/me",
+      "expected_result": "vulnerable",
+      "vulnerability_class": "JWT authentication bypass via weak signing key (authentication weakness)",
+      "expected_owasp_classes": [],
+      "evaluation_status": "not_tested",
+      "not_tested_reason": "This run uses tokens obtained from the login endpoint and does not forge or alter JWTs.",
+      "source_label": [
+        {
+          "document": "README.md",
+          "reference": "List of Vulnerabilities",
+          "label": "JWT authentication bypass via weak signing key"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "reference": "paths['/me'].get and components.securitySchemes.bearerAuth",
+          "label": "The endpoint requires bearer authentication"
+        }
+      ]
+    },
+    {
+      "id": "rate-limiting-api-wide",
+      "method": null,
+      "endpoint": "API-wide",
+      "path": null,
+      "expected_result": "vulnerable",
+      "vulnerability_class": "Lack of Resources & Rate Limiting",
+      "expected_owasp_classes": [],
+      "evaluation_status": "not_tested",
+      "not_tested_reason": "No rate or resource-exhaustion load was generated; this is not measured by Charon's request/response authorization rules.",
+      "source_label": [
+        {
+          "document": "README.md",
+          "reference": "List of Vulnerabilities",
+          "label": "Lack of Resources & Rate Limiting"
+        }
+      ]
+    },
+    {
+      "id": "book-list-policy",
+      "method": "GET",
+      "endpoint": "/books/v1",
+      "path": "/books/v1",
+      "expected_result": "inconclusive",
+      "vulnerability_class": "BOLA policy unclear for global book listing",
+      "expected_owasp_classes": [],
+      "evaluation_status": "not_tested",
+      "not_tested_reason": "The OpenAPI operation is public but does not state whether listing owners/book titles is intended; no authorization label is assigned by VAmPI's vulnerability list.",
+      "source_label": [
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "reference": "paths['/books/v1'].get / operationId api_views.books.get_all_books",
+          "label": "Retrieves all books; no operation-level security requirement"
+        },
+        {
+          "document": "README.md",
+          "reference": "List of Vulnerabilities",
+          "label": "No vulnerability is explicitly assigned to this operation"
+        }
+      ]
+    },
+    {
+      "id": "book-create",
+      "method": "POST",
+      "endpoint": "/books/v1",
+      "path": "/books/v1",
+      "expected_result": "inconclusive",
+      "vulnerability_class": "No source-defined vulnerability label for this operation",
+      "expected_owasp_classes": [],
+      "evaluation_status": "not_tested",
+      "not_tested_reason": "The operation creates state and is not named as vulnerable in VAmPI's vulnerability list; the test does not replay state-changing book creation.",
+      "source_label": [
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "reference": "paths['/books/v1'].post / operationId api_views.books.add_new_book",
+          "label": "Bearer authentication required; creates a book"
+        },
+        {
+          "document": "README.md",
+          "reference": "List of Vulnerabilities",
+          "label": "No vulnerability is explicitly assigned to this operation"
+        }
+      ]
+    },
+    {
+      "id": "database-reset",
+      "method": "GET",
+      "endpoint": "/createdb",
+      "path": "/createdb",
+      "expected_result": "inconclusive",
+      "vulnerability_class": "No source-defined vulnerability label; destructive test setup endpoint",
+      "expected_owasp_classes": [],
+      "evaluation_status": "not_tested",
+      "not_tested_reason": "Used only as setup; it drops and recreates VAmPI's database and is never included in Charon input.",
+      "source_label": [
+        {
+          "document": "README.md",
+          "reference": "Actions table, GET /createdb",
+          "label": "Creates and populates the database with dummy data"
+        },
+        {
+          "document": "openapi_specs/openapi3.yml",
+          "reference": "paths['/createdb'].get / operationId api_views.main.populate_db",
+          "label": "Database initialization endpoint"
+        }
+      ]
+    }
+  ]
+}

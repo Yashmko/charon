@@ -1,0 +1,77 @@
+{
+  "api1_finding_count_for_case": 1,
+  "capture_file": "capture.json",
+  "case_count": 1,
+  "case_result": {
+    "additional_owasp_classes": [
+      "API3"
+    ],
+    "caller": "alice",
+    "case_id": "alice-reads-bobs-order",
+    "charon_result": "detected",
+    "expected_owasp_class": "API1",
+    "expected_result": "vulnerable",
+    "matched_api1_findings": [
+      {
+        "finding_id": "sha256:54cae9e4aba71d2a5aca7121123001e8336f2083aeca91c650e594842fb2b4d5",
+        "owasp_class": "API1",
+        "rule_id": "authz.bola.cross-account-object-exposure",
+        "severity": "high"
+      }
+    ],
+    "matched_findings": [
+      {
+        "finding_id": "sha256:3a3a79fdd885a5e40b153aac6a13e01a0db34954ad7acfb42cce5d7570b1c19c",
+        "owasp_class": "API3",
+        "rule_id": "authz.bopla.excessive-data-exposure",
+        "severity": "high"
+      },
+      {
+        "finding_id": "sha256:54cae9e4aba71d2a5aca7121123001e8336f2083aeca91c650e594842fb2b4d5",
+        "owasp_class": "API1",
+        "rule_id": "authz.bola.cross-account-object-exposure",
+        "severity": "high"
+      }
+    ],
+    "method": "GET",
+    "object_owner": "bob",
+    "path": "/api/orders/2"
+  },
+  "charon_command": [
+    "python -m charon analyze capture.json",
+    "--credentials <temporary-credentials.json>",
+    "--format json",
+    "--mode deterministic",
+    "--output charon-report.json",
+    "--verbose"
+  ],
+  "charon_commit_hash": "20a65d65b1ecb11d39fdd483f7673bcfce3343e9",
+  "charon_version": "charon 0.1.0",
+  "docker_used": false,
+  "finding_count": 2,
+  "findings_by_owasp_class": {
+    "API1": 1,
+    "API3": 1
+  },
+  "metrics_note": "Precision/recall are not calculated: this cross-check contains one labelled vulnerable case and no labelled negative controls.",
+  "mode": "deterministic",
+  "observations": {
+    "alice_cross_account_status_code": 200,
+    "alice_response_object_owner_id": 2,
+    "bob_owner_control_object_owner_id": 2,
+    "bob_owner_control_status_code": 200,
+    "health_status_code": 200,
+    "unauthenticated_status_code": 401
+  },
+  "python_version": "3.11.2",
+  "raw_report_file": "charon-report.json",
+  "report_sha256": "80250de1fd86651e572f2e68ad02294b87c311f3ff21d965d1d6210464e28cba",
+  "schema_version": 1,
+  "stderr_log_file": "charon-stderr.log",
+  "stdout_log_file": "charon-stdout.log",
+  "target_base_url": "http://127.0.0.1:5001",
+  "target_name": "OWASP API Top 10 Security Lab (ShopAPI)",
+  "target_repository": "https://github.com/rangarajusaivivek/OWASP-API-Top10-Lab",
+  "target_revision": "4ebf2b57abdab076d1bbc092132819925573cde1",
+  "target_runtime": "Python/Flask; launched directly with Python and no Docker"
+}

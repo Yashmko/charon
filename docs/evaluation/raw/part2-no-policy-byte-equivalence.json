@@ -1,0 +1,15 @@
+{
+  "baseline_source_commit": "642649d4572a902c5f0343c215b1918095278f63",
+  "current_policy_commit": "20a65d65b1ecb11d39fdd483f7673bcfce3343e9",
+  "capture_sha256": "3be556aad333f51e9d7df0cb25fa62d297235fb65e79ad91a8c4ba88f09ec11e",
+  "credential_labels": [
+    "bob"
+  ],
+  "mode": "deterministic",
+  "target_base_url": "http://127.0.0.1:5001",
+  "old_report_sha256": "3976337eb82fc19b72d3b0ecda43240dd0e4d5f80caefb2599a5726a00d85da5",
+  "current_report_sha256": "3976337eb82fc19b72d3b0ecda43240dd0e4d5f80caefb2599a5726a00d85da5",
+  "report_bytes_equal": true,
+  "finding_count": 2,
+  "note": "Both CLI invocations used the exact same sanitized capture and the same temporary Bob credential against the same loopback target; the credential and temporary report files were not persisted."
+}

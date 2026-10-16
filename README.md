@@ -11,7 +11,7 @@ LLM enrichment is optional by design and must never create or suppress findings.
 ## Pipeline
 
 ```text
-capture → replay → compare → detect → report
+capture → replay → compare → detect → endpoint policy → report
 ```
 
 | Module | Capability |
@@ -21,6 +21,7 @@ capture → replay → compare → detect → report
 | `replay` | HTTP replay using bearer tokens, cookies, API keys, or custom headers |
 | `compare` | Deterministic response comparison and volatile-field suppression |
 | `detect` | BOLA, BFLA, BOPLA, missing-authorization signals, and matrix analysis |
+| `policy` | Optional explicit declarations for public or role-restricted endpoints |
 | `report` | Deterministic JSON and Markdown reports with evidence traceability |
 | `pipeline` / `cli` | Stage orchestration and `charon analyze` command |
 
@@ -60,13 +61,23 @@ can expose inline values.
 Formats: `json`, `markdown`, and `both`. The CLI also supports
 `charon version`; run `charon analyze --help` for options.
 
+### Optional endpoint policies
+
+Declare intentionally public or role-restricted routes with an optional JSON
+file passed using `--endpoint-policy`. Matching findings are suppressed from
+the findings list and reported separately with status `policy-declared`. With
+no policy file, existing findings and report output are unchanged. Role names
+are recorded as declarations; Charon does not verify that the target enforces
+them. See [`docs/endpoint-policies.md`](docs/endpoint-policies.md) for the
+schema, examples, and suppression caveats.
+
 ## Development
 
 ```bash
 python -m pip install -e ".[dev]"
 pytest
 ruff check .
-mypy .
+mypy
 ```
 
 ## Validation and trust boundaries
@@ -84,6 +95,18 @@ header values, but does not currently scrub request/response bodies, URL query
 values, or every possible custom secret-bearing header. Review and sanitize
 captures before sharing or committing them.
 
+## Evaluation
+
+See the [local VAmPI evaluation](docs/evaluation/SETUP.md), its
+[ground-truth labels](docs/evaluation/ground_truth.json),
+[measured results](docs/evaluation/RESULTS.md),
+[endpoint-policy comparison and second-API cross-check](docs/evaluation/POLICY_RESULTS.md),
+and [limitations](docs/evaluation/LIMITATIONS.md). The pinned targets are
+exercised by the evaluation runners; they refuse non-loopback URLs and redirects
+outside the original loopback origin. Reruns default to fresh temporary output
+directories, and any explicitly selected nonempty directory is refused to
+preserve checked-in raw results.
+
 ## OWASP API Security Top 10 mapping
 
 | Detection category | Mapping |
@@ -91,7 +114,7 @@ captures before sharing or committing them.
 | BOLA / IDOR (cross-account object access) | API1: Broken Object Level Authorization |
 | BOPLA (sensitive property exposure) | API3: Broken Object Property Level Authorization |
 | BFLA (privileged function access) | API5: Broken Function Level Authorization |
-| Missing authorization signal | Internal heuristic; not a standalone OWASP API Top 10 category |
+| Missing authorization signal | Charon-internal heuristic (`classification_scope: internal`); not an OWASP category. OWASP API Security Top 10 (2023) API7 is Server Side Request Forgery, not missing authorization |
 
 See [`docs/architecture.md`](docs/architecture.md), [`docs/data-model.md`](docs/data-model.md),
 and [`docs/v1-scope.md`](docs/v1-scope.md) for architecture and scope boundaries.

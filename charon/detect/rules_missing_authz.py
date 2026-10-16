@@ -41,7 +41,7 @@ class MissingAuthzRule:
             return None
         return RuleMatch(
             rule_id=self.rule_id,
-            owasp_class=OwaspClass.API7_MISSING_AUTHZ,
+            owasp_class=OwaspClass.INTERNAL_MISSING_AUTHZ,
             severity=self.config.missing_authz_severity,
             subject=_subject(item),
         )

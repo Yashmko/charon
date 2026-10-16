@@ -7,9 +7,12 @@ calls while exercising the full capture -> replay -> compare -> detect
 
 from __future__ import annotations
 
+import json
+
 from charon.capture import CaptureRecorder, RawExchange, RawMessage
 from charon.model import CapturedExchange
 from charon.pipeline import Pipeline, PipelineConfig
+from charon.policy import EndpointAccess, EndpointPolicy, EndpointPolicyConfig
 from charon.replay import ReplayCredential, TransportResponse
 from charon.report import ReportMode, render_json
 
@@ -95,6 +98,141 @@ class TestPipeline:
         assert result.finding_count == 0
         # Artifact is still recorded for traceability.
         assert len(result.artifacts) == 1
+
+    def test_empty_policy_config_preserves_legacy_report_bytes(self) -> None:
+        baseline = _record(_make_exchange())
+        credential = ReplayCredential(label="userB", bearer_token="token-b")
+
+        def run(config: PipelineConfig | None) -> str:
+            pipeline = Pipeline(
+                transport=StubTransport(
+                    response=TransportResponse(
+                        status_code=200,
+                        body=b'{"id": 8821, "owner": "userA"}',
+                    )
+                ),
+                config=config,
+            )
+            return render_json(pipeline.run([baseline], [credential]).report)
+
+        legacy_report = run(None)
+        empty_config_report = run(PipelineConfig())
+        assert legacy_report == empty_config_report
+        assert json.loads(legacy_report)["finding_count"] == 1
+        assert "policy_declarations" not in json.loads(empty_config_report)
+
+    def test_public_policy_suppresses_findings_and_is_deterministic_in_both_modes(
+        self,
+    ) -> None:
+        baseline = _record(_make_exchange())
+        credentials = [ReplayCredential(label="userB", bearer_token="token-b")]
+        policies = EndpointPolicyConfig(
+            (
+                EndpointPolicy(
+                    method="GET",
+                    path="/api/invoices/{invoice_id}",
+                    access=EndpointAccess.PUBLIC,
+                    description="Public invoice summary endpoint.",
+                ),
+            )
+        )
+
+        def run(mode: ReportMode) -> str:
+            config = PipelineConfig(report_mode=mode, endpoint_policy=policies)
+            pipeline = Pipeline(
+                transport=StubTransport(
+                    response=TransportResponse(
+                        status_code=200,
+                        body=b'{"id": 8821, "owner": "userA"}',
+                    )
+                ),
+                config=config,
+            )
+            result = pipeline.run([baseline], credentials)
+            assert result.finding_count == 0
+            assert result.report.finding_count == 0
+            return render_json(result.report)
+
+        for mode in (ReportMode.DETERMINISTIC, ReportMode.ENRICHED):
+            rendered = run(mode)
+            assert rendered == run(mode)
+            data = json.loads(rendered)
+            declaration = data["policy_declarations"][0]
+            assert declaration["status"] == "policy-declared"
+            assert declaration["access"] == "public"
+            assert declaration["policy_path"] == "/api/invoices/{invoice_id}"
+            assert declaration["suppressed_findings"][0]["rule_id"] == (
+                "authz.bola.cross-account-object-exposure"
+            )
+
+    def test_matching_policy_is_reported_even_without_suppressed_findings(self) -> None:
+        baseline = _record(_make_exchange())
+        policy = EndpointPolicy(
+            method="GET",
+            path="/api/invoices/{invoice_id}",
+            access=EndpointAccess.PUBLIC,
+        )
+        result = Pipeline(
+            transport=StubTransport(
+                response=TransportResponse(
+                    status_code=200,
+                    body=b'{"id": 8821}',
+                )
+            ),
+            config=PipelineConfig(
+                endpoint_policy=EndpointPolicyConfig((policy,))
+            ),
+        ).run(
+            [baseline],
+            [ReplayCredential(label="userA", bearer_token="token-a")],
+        )
+
+        assert result.finding_count == 0
+        assert len(result.report.policy_declarations) == 1
+        assert result.report.policy_declarations[0].status == "policy-declared"
+        assert result.report.policy_declarations[0].suppressed_findings == ()
+
+    def test_role_restricted_policy_suppresses_expected_role_transition(self) -> None:
+        baseline = _record(
+            _make_exchange(
+                account_label="viewer",
+                method="GET",
+                url="https://api.example.test/api/admin/users",
+                status_code=403,
+                response_body=b'{"error":"forbidden"}',
+            )
+        )
+        policy = EndpointPolicy(
+            method="GET",
+            path="/api/admin/users",
+            access=EndpointAccess.ROLE_RESTRICTED,
+            allowed_roles=("admin",),
+        )
+        pipeline = Pipeline(
+            transport=StubTransport(
+                response=TransportResponse(
+                    status_code=200,
+                    body=b'{"users":[]}',
+                )
+            ),
+            config=PipelineConfig(
+                endpoint_policy=EndpointPolicyConfig((policy,))
+            ),
+        )
+
+        result = pipeline.run(
+            [baseline],
+            [ReplayCredential(label="admin", bearer_token="token-admin")],
+        )
+
+        assert result.finding_count == 0
+        declaration = result.report.policy_declarations[0]
+        assert declaration.status == "policy-declared"
+        assert declaration.access == "role-restricted"
+        assert declaration.allowed_roles == ("admin",)
+        assert declaration.suppressed_findings[0].rule_id == (
+            "authz.bfla.privilege-transition"
+        )
 
     def test_bfla_finding_detected(self) -> None:
         """Denied -> Granted transition under different identity -> BFLA."""
@@ -222,6 +360,7 @@ class TestPipeline:
         assert pipeline.config.transport_timeout_seconds == 5.0
         assert pipeline.config.transport_follow_redirects is True
         assert pipeline.config.report_mode is ReportMode.DETERMINISTIC
+        assert pipeline.config.endpoint_policy.policies == ()
 
     def test_markdown_report_render(self) -> None:
         """Pipeline report should render as valid Markdown."""

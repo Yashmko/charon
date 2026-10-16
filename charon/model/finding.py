@@ -34,12 +34,24 @@ __all__ = ["OwaspClass", "Severity", "Finding"]
 
 
 class OwaspClass(enum.Enum):
-    """OWASP API Security Top 10 (2023) classes relevant to v1."""
+    """OWASP classes and Charon-internal classification labels.
+
+    ``API1``, ``API3``, and ``API5`` are OWASP API Security Top 10 (2023)
+    categories. The missing-authorization heuristic is an internal signal,
+    not an OWASP category; official API7:2023 is Server Side Request Forgery.
+    """
 
     API1_BOLA = "API1"
     API3_BOPLA = "API3"
     API5_BFLA = "API5"
-    API7_MISSING_AUTHZ = "API7"
+    INTERNAL_MISSING_AUTHZ = "INTERNAL-MISSING-AUTHORIZATION"
+
+    @property
+    def classification_scope(self) -> str:
+        """Return whether this label is official OWASP or internal to Charon."""
+        if self is OwaspClass.INTERNAL_MISSING_AUTHZ:
+            return "internal"
+        return "owasp-api-security-top-10-2023"
 
 
 class Severity(enum.Enum):

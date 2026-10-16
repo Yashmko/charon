@@ -1,0 +1,8 @@
+{
+  "alice_cross_account_status_code": 200,
+  "alice_response_object_owner_id": 2,
+  "bob_owner_control_object_owner_id": 2,
+  "bob_owner_control_status_code": 200,
+  "health_status_code": 200,
+  "unauthenticated_status_code": 401
+}

@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from charon.report.model import FindingReport, Report
+from charon.report.model import FindingReport, Report, SuppressedFindingView
 
 __all__ = ["render_json"]
 
@@ -26,7 +26,8 @@ def _finding_dict(finding: FindingReport) -> dict[str, Any]:
     data: dict[str, Any] = {
         "finding_id": finding.finding_id,
         "rule_id": finding.rule_id,
-        "owasp_class": finding.owasp_class,
+        "classification": finding.classification,
+        "classification_scope": finding.classification_scope,
         "severity": finding.severity,
         "confidence": finding.confidence,
         "title": finding.title,
@@ -49,6 +50,8 @@ def _finding_dict(finding: FindingReport) -> dict[str, Any]:
             "captured_exchange_ids": list(finding.trace.captured_exchange_ids),
         },
     }
+    if finding.classification_scope == "owasp-api-security-top-10-2023":
+        data["owasp_class"] = finding.classification
     if finding.annotations:
         data["annotations"] = [
             {
@@ -59,6 +62,18 @@ def _finding_dict(finding: FindingReport) -> dict[str, Any]:
             }
             for a in finding.annotations
         ]
+    return data
+
+
+def _suppressed_finding_dict(finding: SuppressedFindingView) -> dict[str, str]:
+    data = {
+        "finding_id": finding.finding_id,
+        "rule_id": finding.rule_id,
+        "classification": finding.classification,
+        "classification_scope": finding.classification_scope,
+    }
+    if finding.classification_scope == "owasp-api-security-top-10-2023":
+        data["owasp_class"] = finding.classification
     return data
 
 
@@ -79,6 +94,24 @@ def render_json(report: Report) -> str:
         ],
         "findings": [_finding_dict(f) for f in report.findings],
     }
+    if report.policy_declarations:
+        payload["policy_declarations"] = [
+            {
+                "status": declaration.status,
+                "method": declaration.method,
+                "path": declaration.path,
+                "policy_path": declaration.policy_path,
+                "access": declaration.access,
+                "allowed_roles": list(declaration.allowed_roles),
+                "description": declaration.description,
+                "matched_exchange_ids": list(declaration.matched_exchange_ids),
+                "suppressed_findings": [
+                    _suppressed_finding_dict(finding)
+                    for finding in declaration.suppressed_findings
+                ],
+            }
+            for declaration in report.policy_declarations
+        ]
     return json.dumps(
         payload,
         sort_keys=True,

@@ -1,14 +1,16 @@
 """The pipeline engine: orchestrate the deterministic core stages.
 
-:class:`Pipeline` wires capture -> replay -> compare -> detect -> report
-in a single deterministic run. It is the primary public API for running
-Charon end-to-end.
+:class:`Pipeline` wires capture -> replay -> compare -> detect -> endpoint
+policy -> report in a single deterministic run. An empty endpoint policy
+preserves the existing detection flow; explicit matches are reported as
+``policy-declared`` instead of findings.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 from charon.compare import ComparisonEngine
 from charon.detect import (
@@ -27,13 +29,20 @@ from charon.model import (
 )
 from charon.ownership import OwnershipEngine, OwnershipMap
 from charon.pipeline.config import PipelineConfig
+from charon.policy import EndpointPolicy
 from charon.replay import (
     ReplayCredential,
     ReplayEngine,
     ReplayExecution,
     Transport,
 )
-from charon.report import ArtifactIndex, Report, ReportBuilder
+from charon.report import (
+    ArtifactIndex,
+    PolicyDeclarationView,
+    Report,
+    ReportBuilder,
+    SuppressedFindingView,
+)
 
 __all__ = ["PipelineArtifact", "PipelineResult", "Pipeline"]
 
@@ -59,8 +68,8 @@ class PipelineResult:
 
     :param artifacts: Per-exchange pipeline artifacts, preserving the full
         traceability chain.
-    :param findings: All unique findings across all inputs, sorted by
-        finding_id.
+    :param findings: Unique findings not suppressed by an explicit endpoint
+        policy, sorted by finding_id.
     :param ownership: Ownership map inferred from captured exchanges.
     :param report: The assembled, format-agnostic report.
     """
@@ -73,6 +82,15 @@ class PipelineResult:
     @property
     def finding_count(self) -> int:
         return len(self.findings)
+
+
+@dataclass(slots=True)
+class _PolicyDeclarationAccumulator:
+    policy: EndpointPolicy
+    method: str
+    path: str
+    matched_exchange_ids: set[str] = field(default_factory=set)
+    suppressed_findings: dict[str, SuppressedFindingView] = field(default_factory=dict)
 
 
 class Pipeline:
@@ -120,7 +138,9 @@ class Pipeline:
         1. Replays the exchange under the credential.
         2. Compares the replay response to the baseline.
         3. Runs detection rules over the comparison.
-        4. Indexes all artifacts and builds a deterministic report.
+        4. Applies any explicit endpoint policies; matched signals are
+           reported as ``policy-declared`` rather than findings.
+        5. Indexes artifacts and builds a deterministic report.
 
         :param exchanges: Captured exchanges to analyze.
         :param credentials: Credentials to replay each exchange under.
@@ -145,7 +165,12 @@ class Pipeline:
                 if artifact.detection_input is not None:
                     detection_inputs.append(artifact.detection_input)
 
-        findings = self._detect.detect(detection_inputs, ownership=ownership)
+        detected_findings = self._detect.detect(
+            detection_inputs, ownership=ownership
+        )
+        findings, policy_declarations = self._apply_endpoint_policies(
+            exchange_list, detected_findings
+        )
         index = self._build_index(artifact_list, findings)
         confidence_scores = score_findings(
             findings,
@@ -157,6 +182,7 @@ class Pipeline:
             mode=self._config.report_mode,
             confidence_scores=confidence_scores,
             ownership=ownership,
+            policy_declarations=policy_declarations,
         )
         return PipelineResult(
             artifacts=tuple(artifact_list),
@@ -164,6 +190,113 @@ class Pipeline:
             ownership=ownership,
             report=report,
         )
+
+    def _apply_endpoint_policies(
+        self,
+        exchanges: tuple[CapturedExchange, ...],
+        findings: tuple[Finding, ...],
+    ) -> tuple[tuple[Finding, ...], tuple[PolicyDeclarationView, ...]]:
+        """Suppress findings fully covered by an explicit endpoint policy.
+
+        A finding is suppressed only when every captured exchange in its
+        evidence chain matches a declared policy. This keeps cross-endpoint
+        matrix findings visible if any supporting endpoint is undeclared.
+        """
+        policy_config = self._config.endpoint_policy
+        if not policy_config.policies:
+            return findings, ()
+
+        matches_by_exchange: dict[
+            str, tuple[EndpointPolicy, str, str]
+        ] = {}
+        accumulators: dict[
+            tuple[EndpointPolicy, str, str], _PolicyDeclarationAccumulator
+        ] = {}
+
+        def accumulator_for(
+            policy: EndpointPolicy,
+            method: str,
+            path: str,
+        ) -> _PolicyDeclarationAccumulator:
+            key = (policy, method, path)
+            if key not in accumulators:
+                accumulators[key] = _PolicyDeclarationAccumulator(
+                    policy=policy,
+                    method=method,
+                    path=path,
+                )
+            return accumulators[key]
+
+        for exchange in exchanges:
+            path = urlsplit(exchange.url).path
+            policy = policy_config.match(exchange.method, path)
+            if policy is None:
+                continue
+            matches_by_exchange[exchange.exchange_id] = (
+                policy,
+                exchange.method,
+                path,
+            )
+            accumulator_for(policy, exchange.method, path).matched_exchange_ids.add(
+                exchange.exchange_id
+            )
+
+        retained_findings: list[Finding] = []
+        for finding in findings:
+            exchange_ids = sorted(
+                {
+                    exchange_id
+                    for evidence in finding.evidence
+                    for exchange_id in evidence.captured_exchange_refs
+                }
+            )
+            policy_matches = [
+                matches_by_exchange.get(exchange_id) for exchange_id in exchange_ids
+            ]
+            if not exchange_ids or any(match is None for match in policy_matches):
+                retained_findings.append(finding)
+                continue
+
+            suppressed = SuppressedFindingView(
+                finding_id=finding.finding_id,
+                rule_id=finding.rule_id,
+                classification=finding.owasp_class.value,
+                classification_scope=finding.owasp_class.classification_scope,
+            )
+            for match in policy_matches:
+                assert match is not None
+                policy, method, path = match
+                accumulator_for(policy, method, path).suppressed_findings[
+                    finding.finding_id
+                ] = suppressed
+
+        declarations = tuple(
+            PolicyDeclarationView(
+                method=accumulator.method,
+                path=accumulator.path,
+                policy_path=accumulator.policy.path,
+                access=accumulator.policy.access.value,
+                allowed_roles=accumulator.policy.allowed_roles,
+                description=accumulator.policy.description,
+                matched_exchange_ids=tuple(
+                    sorted(accumulator.matched_exchange_ids)
+                ),
+                suppressed_findings=tuple(
+                    accumulator.suppressed_findings[finding_id]
+                    for finding_id in sorted(accumulator.suppressed_findings)
+                ),
+            )
+            for _key, accumulator in sorted(
+                accumulators.items(),
+                key=lambda item: (
+                    item[0][1],
+                    item[0][2],
+                    item[0][0].path,
+                    item[0][0].access.value,
+                ),
+            )
+        )
+        return tuple(retained_findings), declarations
 
     def _process(
         self,

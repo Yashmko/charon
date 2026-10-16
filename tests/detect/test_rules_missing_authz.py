@@ -68,11 +68,12 @@ def test_missing_authz_rule_id() -> None:
     assert match.rule_id == "authz.missing-authz.no-authorization-header"
 
 
-def test_missing_authz_owasp_class() -> None:
+def test_missing_authz_is_internal_classification() -> None:
     item = _make_no_auth_input()
     match = MissingAuthzRule().evaluate(item)
     assert match is not None
-    assert match.owasp_class is OwaspClass.API7_MISSING_AUTHZ
+    assert match.owasp_class is OwaspClass.INTERNAL_MISSING_AUTHZ
+    assert match.owasp_class.classification_scope == "internal"
 
 
 def test_missing_authz_does_not_fire_same_identity() -> None:

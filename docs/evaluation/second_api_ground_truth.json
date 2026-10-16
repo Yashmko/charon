@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "target": {
+    "repository": "https://github.com/rangarajusaivivek/OWASP-API-Top10-Lab",
+    "revision": "4ebf2b57abdab076d1bbc092132819925573cde1",
+    "name": "OWASP API Top 10 Security Lab (ShopAPI)",
+    "runtime": "Python/Flask; launched directly with Python and no Docker"
+  },
+  "cases": [
+    {
+      "id": "alice-reads-bobs-order",
+      "method": "GET",
+      "path": "/api/orders/2",
+      "expected_result": "vulnerable",
+      "owasp_class": "API1",
+      "caller": "alice",
+      "object_owner": "bob",
+      "object_owner_id": 2,
+      "baseline_status_code": 200,
+      "evidence": [
+        {
+          "document": "README.md",
+          "line": 26,
+          "quote": "| API1 | Broken Object Level Authorization (BOLA) | `/api/orders/{id}` | ✅ |",
+          "label": "Identifies the order route as the API1 BOLA exercise"
+        },
+        {
+          "document": "README.md",
+          "line": 51,
+          "quote": "# API1: BOLA — access another user's order",
+          "label": "Describes the cross-user order access case"
+        },
+        {
+          "document": "README.md",
+          "line": 52,
+          "quote": "curl http://localhost:5000/api/orders/2 \\",
+          "label": "Specifies the concrete object path"
+        },
+        {
+          "document": "vulnerable_api/app.py",
+          "line": 124,
+          "quote": "❌ VULNERABLE (API1): No check that order belongs to requesting user.",
+          "label": "Independently labels the missing object-ownership check"
+        },
+        {
+          "document": "vulnerable_api/app.py",
+          "line": 125,
+          "quote": "Attack: User 1 accesses /api/orders/2 (belongs to user 2).",
+          "label": "Matches Alice reading Bob's seeded order 2"
+        },
+        {
+          "document": "vulnerable_api/app.py",
+          "line": 133,
+          "quote": "# ❌ Missing authorization check",
+          "label": "Confirms the route omits the ownership check"
+        }
+      ],
+      "label_rationale": "The pinned target's README independently labels /api/orders/{id} as API1 BOLA and gives /api/orders/2 as the cross-user example. The route implementation explicitly states that order ownership is not checked and returns the selected order."
+    }
+  ]
+}

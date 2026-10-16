@@ -125,7 +125,7 @@ class MatrixAnalysis:
             results.append(
                 Finding.create(
                     rule_id="matrix.mutual-access.privilege-inversion",
-                    owasp_class=OwaspClass.API7_MISSING_AUTHZ,
+                    owasp_class=OwaspClass.INTERNAL_MISSING_AUTHZ,
                     severity=self.config.mutual_access_severity,
                     subject=subject,
                     evidence=tuple(evidence_list),

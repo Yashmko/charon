@@ -20,6 +20,7 @@ from charon.report.model import (
     FieldDifference,
     FindingReport,
     OwnershipView,
+    PolicyDeclarationView,
     ProvenancedFact,
     Report,
     ReportMode,
@@ -52,6 +53,7 @@ class ReportBuilder:
         annotations: Iterable[Annotation] = (),
         confidence_scores: Mapping[str, float] | None = None,
         ownership: OwnershipMap | None = None,
+        policy_declarations: Iterable[PolicyDeclarationView] = (),
     ) -> Report:
         """Build a report over ``findings``.
 
@@ -64,6 +66,8 @@ class ReportBuilder:
             not present in the mapping default to ``0.0``.
         :param ownership: Optional ownership map whose inferences are
             included in the report for traceability.
+        :param policy_declarations: Explicit endpoint policies matched by the
+            pipeline. Empty by default, so ordinary reports remain unchanged.
         """
         scores = confidence_scores if confidence_scores is not None else {}
         annotations_by_target = self._group_annotations(mode, annotations)
@@ -73,10 +77,23 @@ class ReportBuilder:
         ]
         reports.sort(key=lambda r: r.finding_id)
         ownership_views = self._build_ownership(ownership)
+        policy_views = tuple(
+            sorted(
+                policy_declarations,
+                key=lambda declaration: (
+                    declaration.method,
+                    declaration.path,
+                    declaration.policy_path,
+                    declaration.access,
+                    declaration.allowed_roles,
+                ),
+            )
+        )
         return Report(
             mode=mode,
             findings=tuple(reports),
             ownership=ownership_views,
+            policy_declarations=policy_views,
         )
 
     @staticmethod
@@ -149,7 +166,8 @@ class ReportBuilder:
         return FindingReport(
             finding_id=finding.finding_id,
             rule_id=finding.rule_id,
-            owasp_class=finding.owasp_class.value,
+            classification=finding.owasp_class.value,
+            classification_scope=finding.owasp_class.classification_scope,
             severity=finding.severity.value,
             confidence=confidence_scores.get(finding.finding_id, 0.0),
             title=self._title(finding),
