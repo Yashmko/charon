@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Run a small deterministic Charon check against the pinned ShopAPI lab.
 
-The script accepts loopback targets only, verifies the pinned source checkout,
-uses seeded synthetic accounts, stores only a sanitized capture, and runs
+The script accepts loopback targets only, blocks redirects outside the original
+loopback origin, verifies the pinned source checkout, uses seeded synthetic
+accounts, stores only a sanitized capture, and runs
 Charon's normal CLI. It never starts the target or requires Docker.
 """
 
@@ -17,17 +18,60 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
+from email.message import Message
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GROUND_TRUTH_PATH = Path(__file__).with_name("second_api_ground_truth.json")
 EXPECTED_REVISION = "4ebf2b57abdab076d1bbc092132819925573cde1"
 ALICE_PASSWORD = "password123"
 BOB_PASSWORD = "password456"
+
+
+class _LoopbackRedirectHandler(HTTPRedirectHandler):
+    """Allow only redirects that remain on the original loopback origin."""
+
+    def redirect_request(
+        self,
+        req: Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Message,
+        newurl: str,
+    ) -> Request | None:
+        source = urlsplit(req.full_url)
+        target = urlsplit(newurl)
+        try:
+            source_port = source.port if source.port is not None else 80
+            target_port = target.port if target.port is not None else 80
+        except ValueError:
+            source_port = target_port = -1
+
+        loopback_hosts = {"127.0.0.1", "localhost", "::1"}
+        same_loopback_origin = (
+            source.scheme == "http"
+            and target.scheme == "http"
+            and source.hostname in loopback_hosts
+            and target.hostname in loopback_hosts
+            and source.hostname == target.hostname
+            and source_port == target_port
+            and target.username is None
+            and target.password is None
+        )
+        if not same_loopback_origin:
+            raise HTTPError(
+                req.full_url,
+                code,
+                "Refusing redirect outside the local evaluation origin.",
+                headers,
+                fp,
+            )
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 @dataclass(frozen=True)
@@ -60,7 +104,8 @@ def _request(
         method=method,
     )
     try:
-        with urlopen(request, timeout=timeout) as response:
+        opener = build_opener(_LoopbackRedirectHandler())
+        with opener.open(request, timeout=timeout) as response:
             return Observation(
                 response.status,
                 {name.lower(): value for name, value in response.headers.items()},
@@ -199,6 +244,25 @@ def _findings_for_case(
     return sorted(matched, key=lambda item: item["finding_id"] or "")
 
 
+def _prepare_output_dir(output_dir: Path) -> Path:
+    try:
+        if output_dir.exists():
+            if not output_dir.is_dir():
+                raise SystemExit(f"Output path is not a directory: {output_dir}.")
+            if next(output_dir.iterdir(), None) is not None:
+                raise SystemExit(
+                    f"Output directory is not empty: {output_dir}. Refusing to "
+                    "overwrite evaluation results; choose a new empty directory "
+                    "with --output-dir."
+                )
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        raise SystemExit(
+            f"Cannot prepare output directory {output_dir}: {error}"
+        ) from error
+    return output_dir
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -220,8 +284,12 @@ def main() -> int:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=REPO_ROOT / "docs/evaluation/raw/second-api",
-        help="New output directory for the capture, report, logs, and summary.",
+        default=None,
+        help=(
+            "New empty output directory for capture, report, logs, and summary; "
+            "if omitted, a fresh temporary directory is created. Nonempty "
+            "directories are refused."
+        ),
     )
     parser.add_argument("--timeout", type=float, default=8.0)
     args = parser.parse_args()
@@ -250,14 +318,11 @@ def main() -> int:
         )
 
     output_dir = args.output_dir
-    if not output_dir.is_absolute():
+    if output_dir is None:
+        output_dir = Path(tempfile.mkdtemp(prefix="charon-eval-shopapi-"))
+    elif not output_dir.is_absolute():
         output_dir = REPO_ROOT / output_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
-    if any(output_dir.iterdir()):
-        raise SystemExit(
-            f"Output directory is not empty: {output_dir}. Choose a new directory "
-            "to preserve prior raw results."
-        )
+    output_dir = _prepare_output_dir(output_dir.resolve())
 
     charon_version = _charon_version()
     health = _request(base_url, "GET", "/", timeout=args.timeout)

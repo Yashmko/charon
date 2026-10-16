@@ -60,8 +60,12 @@ captured exchange is always recorded in the policy-declared section, even if
 there was no finding to suppress. Any finding whose complete evidence chain is
 covered by configured policies is removed from the `findings` list and from
 `finding_count`. A cross-endpoint finding remains if any evidence endpoint is
-not covered. Suppressed finding IDs, rule IDs, and OWASP classes are retained
-under that endpoint's policy entry for auditability.
+not covered. Suppressed finding IDs, rule IDs, classifications, and their
+`classification_scope` are retained under that endpoint's policy entry for
+auditability. In report JSON schema version 2, findings and suppressed entries
+use `classification` plus `classification_scope`; only official OWASP
+classifications also use the `owasp_class` field. Charon-internal heuristics
+are labeled separately.
 
 JSON reports include a `policy_declarations` array only when a policy matched.
 Each entry has `status: "policy-declared"`, the observed method/path, the

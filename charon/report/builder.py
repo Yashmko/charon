@@ -166,7 +166,8 @@ class ReportBuilder:
         return FindingReport(
             finding_id=finding.finding_id,
             rule_id=finding.rule_id,
-            owasp_class=finding.owasp_class.value,
+            classification=finding.owasp_class.value,
+            classification_scope=finding.owasp_class.classification_scope,
             severity=finding.severity.value,
             confidence=confidence_scores.get(finding.finding_id, 0.0),
             title=self._title(finding),

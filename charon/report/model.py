@@ -31,7 +31,7 @@ __all__ = [
 
 
 #: Schema version for the JSON output; bumped only on breaking changes.
-REPORT_SCHEMA_VERSION = "1"
+REPORT_SCHEMA_VERSION = "2"
 
 
 class ReportMode(enum.Enum):
@@ -104,11 +104,12 @@ class OwnershipView:
 
 @dataclass(frozen=True, slots=True)
 class SuppressedFindingView:
-    """Identity and class of a finding suppressed by a declared policy."""
+    """Identity and classification of a finding suppressed by a policy."""
 
     finding_id: str
     rule_id: str
-    owasp_class: str
+    classification: str
+    classification_scope: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,7 +138,8 @@ class FindingReport:
 
     finding_id: str
     rule_id: str
-    owasp_class: str
+    classification: str
+    classification_scope: str
     severity: str
     confidence: float
     title: str

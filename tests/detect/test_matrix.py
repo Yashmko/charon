@@ -77,7 +77,7 @@ def test_mutual_access_fires() -> None:
     assert len(result.findings) == 1
     f = result.findings[0]
     assert f.rule_id == "matrix.mutual-access.privilege-inversion"
-    assert f.owasp_class is OwaspClass.API7_MISSING_AUTHZ
+    assert f.owasp_class is OwaspClass.INTERNAL_MISSING_AUTHZ
     assert f.severity is Severity.CRITICAL
 
 

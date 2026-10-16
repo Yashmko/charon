@@ -102,7 +102,10 @@ See the [local VAmPI evaluation](docs/evaluation/SETUP.md), its
 [measured results](docs/evaluation/RESULTS.md),
 [endpoint-policy comparison and second-API cross-check](docs/evaluation/POLICY_RESULTS.md),
 and [limitations](docs/evaluation/LIMITATIONS.md). The pinned targets are
-exercised by the evaluation runners; they refuse non-loopback URLs.
+exercised by the evaluation runners; they refuse non-loopback URLs and redirects
+outside the original loopback origin. Reruns default to fresh temporary output
+directories, and any explicitly selected nonempty directory is refused to
+preserve checked-in raw results.
 
 ## OWASP API Security Top 10 mapping
 
@@ -111,7 +114,7 @@ exercised by the evaluation runners; they refuse non-loopback URLs.
 | BOLA / IDOR (cross-account object access) | API1: Broken Object Level Authorization |
 | BOPLA (sensitive property exposure) | API3: Broken Object Property Level Authorization |
 | BFLA (privileged function access) | API5: Broken Function Level Authorization |
-| Missing authorization signal | Internal heuristic; not a standalone OWASP API Top 10 category |
+| Missing authorization signal | Charon-internal heuristic (`classification_scope: internal`); not an OWASP category. OWASP API Security Top 10 (2023) API7 is Server Side Request Forgery, not missing authorization |
 
 See [`docs/architecture.md`](docs/architecture.md), [`docs/data-model.md`](docs/data-model.md),
 and [`docs/v1-scope.md`](docs/v1-scope.md) for architecture and scope boundaries.

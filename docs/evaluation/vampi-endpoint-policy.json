@@ -4,7 +4,7 @@
       "method": "GET",
       "path": "/users/v1",
       "access": "public",
-      "description": "Pinned VAmPI README.md:18 says unregistered users can see minimal information about dummy users; README.md:27 and openapi_specs/openapi3.yml:67 identify this basic-information route."
+      "description": "Operator-declared public route based on README.md:18, README.md:27, and openapi_specs/openapi3.yml:67. This does not establish that runner-created accounts or their email addresses are within the intended public-data scope and is not ground-truth evidence for users-list-public."
     },
     {
       "method": "DELETE",

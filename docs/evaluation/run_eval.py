@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Run Charon's deterministic pipeline against one pinned, local VAmPI target.
 
-The script refuses non-loopback base URLs, recreates VAmPI's disposable test
-DB, records only sanitized captures in a temporary directory, runs
+The script refuses non-loopback base URLs and redirects outside the original
+loopback origin, recreates VAmPI's disposable test DB, records only sanitized
+captures in a temporary directory, runs
 `python -m charon analyze --mode deterministic`, and saves the raw Charon JSON
-report plus an exact-count summary under docs/evaluation/raw by default.
+report plus an exact-count summary to a new empty output directory. Existing
+output directories are refused to protect prior evaluation results.
 """
 
 from __future__ import annotations
@@ -17,12 +19,13 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
+from email.message import Message
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GROUND_TRUTH_PATH = Path(__file__).with_name("ground_truth.json")
@@ -36,6 +39,48 @@ BOB_PASSWORD = "CharonEvalBobPassword1"
 DISPOSABLE_PASSWORD = "CharonEvalDisposablePassword1"
 BOB_PASSWORD_AFTER_PROBE = "CharonEvalBobPasswordAfterProbe1"
 ADMIN_PASSWORD = "pass1"  # Seeded by VAmPI's documented /createdb endpoint.
+
+
+class _LoopbackRedirectHandler(HTTPRedirectHandler):
+    """Allow only redirects that remain on the original loopback origin."""
+
+    def redirect_request(
+        self,
+        req: Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Message,
+        newurl: str,
+    ) -> Request | None:
+        source = urlsplit(req.full_url)
+        target = urlsplit(newurl)
+        try:
+            source_port = source.port if source.port is not None else 80
+            target_port = target.port if target.port is not None else 80
+        except ValueError:
+            source_port = target_port = -1
+
+        loopback_hosts = {"127.0.0.1", "localhost", "::1"}
+        same_loopback_origin = (
+            source.scheme == "http"
+            and target.scheme == "http"
+            and source.hostname in loopback_hosts
+            and target.hostname in loopback_hosts
+            and source.hostname == target.hostname
+            and source_port == target_port
+            and target.username is None
+            and target.password is None
+        )
+        if not same_loopback_origin:
+            raise HTTPError(
+                req.full_url,
+                code,
+                "Refusing redirect outside the local evaluation origin.",
+                headers,
+                fp,
+            )
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 @dataclass(frozen=True)
@@ -69,7 +114,8 @@ def _request(
         method=method,
     )
     try:
-        with urlopen(request, timeout=timeout) as response:
+        opener = build_opener(_LoopbackRedirectHandler())
+        with opener.open(request, timeout=timeout) as response:
             return Observation(
                 status_code=response.status,
                 headers={key.lower(): value for key, value in response.headers.items()},
@@ -281,11 +327,40 @@ def _exact_ratio(numerator: int, denominator: int) -> str | None:
     return str(Fraction(numerator, denominator))
 
 
+def _classified_finding(
+    finding: dict[str, Any],
+    classes_by_rule: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    rule_id = str(finding.get("rule_id", ""))
+    raw_code = finding.get("classification", finding.get("owasp_class"))
+    evaluation_class = classes_by_rule.get(rule_id)
+    if evaluation_class is None:
+        return {
+            "finding_id": finding.get("finding_id"),
+            "rule_id": finding.get("rule_id"),
+            "classification": str(raw_code or ""),
+            "classification_scope": "unmapped",
+            "reported_code": raw_code,
+        }
+    return {
+        "finding_id": finding.get("finding_id"),
+        "rule_id": finding.get("rule_id"),
+        "classification": evaluation_class["classification"],
+        "classification_scope": evaluation_class["classification_scope"],
+        "reported_code": raw_code,
+    }
+
+
 def _summarize(
     ground_truth: dict[str, Any],
     report: dict[str, Any],
     observations: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    evaluation_classes = ground_truth["evaluation_classes"]
+    classes_by_rule = {
+        evaluation_class["rule_id"]: evaluation_class
+        for evaluation_class in evaluation_classes
+    }
     executed_cases = [
         case
         for case in ground_truth["cases"]
@@ -321,14 +396,12 @@ def _summarize(
         if case is None:
             unmapped.append(str(finding.get("finding_id", "<missing-id>")))
             continue
-        owasp_class = str(finding.get("owasp_class", ""))
-        predictions[case["id"]].add(owasp_class)
+        classification = _classified_finding(finding, classes_by_rule)
+        predictions[case["id"]].add(classification["classification"])
         observed_findings.append(
             {
                 "case_id": case["id"],
-                "finding_id": finding.get("finding_id"),
-                "rule_id": finding.get("rule_id"),
-                "owasp_class": owasp_class,
+                **classification,
                 "method": method or case["method"],
                 "path": path,
                 "replay_identity": facts.get("replay_identity"),
@@ -345,7 +418,15 @@ def _summarize(
     observation_by_case = {
         item["case_id"]: item for item in observations
     }
-    policy_declarations = report.get("policy_declarations", [])
+    policy_declarations: list[dict[str, Any]] = []
+    for raw_declaration in report.get("policy_declarations", []):
+        declaration = dict(raw_declaration)
+        declaration["suppressed_findings"] = [
+            _classified_finding(finding, classes_by_rule)
+            for finding in raw_declaration.get("suppressed_findings", [])
+        ]
+        policy_declarations.append(declaration)
+
     policy_declared_case_ids: set[str] = set()
     policy_declared_cases: list[dict[str, Any]] = []
     for declaration in policy_declarations:
@@ -389,13 +470,13 @@ def _summarize(
                     else None
                 ),
                 "baseline_status_code": observation["baseline_status_code"],
-                "observed_owasp_classes": sorted(predictions[case["id"]]),
+                "observed_classes": sorted(predictions[case["id"]]),
             }
         )
 
     metrics: list[dict[str, Any]] = []
-    for evaluation_class in ground_truth["evaluation_classes"]:
-        code = evaluation_class["owasp_class"]
+    for evaluation_class in evaluation_classes:
+        code = evaluation_class["classification"]
         positive_cases = {
             case["id"]
             for case in metric_cases
@@ -416,7 +497,8 @@ def _summarize(
         true_negatives = len(negative_cases - predicted_cases)
         metrics.append(
             {
-                "owasp_class": code,
+                "classification": code,
+                "classification_scope": evaluation_class["classification_scope"],
                 "name": evaluation_class["name"],
                 "rule_id": evaluation_class["rule_id"],
                 "test_cases": len(positive_cases) + len(negative_cases),
@@ -443,7 +525,7 @@ def _summarize(
             "baseline_status_code": observation_by_case[case["id"]][
                 "baseline_status_code"
             ],
-            "observed_owasp_classes": sorted(predictions[case["id"]]),
+            "observed_classes": sorted(predictions[case["id"]]),
             "reason": case.get(
                 "label_rationale", "The source does not support a conclusive label."
             ),
@@ -464,7 +546,7 @@ def _summarize(
     ]
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "mode": report.get("mode"),
         "finding_count": report.get("finding_count"),
         "tested_case_count": len(executed_cases),
@@ -478,7 +560,7 @@ def _summarize(
             observed_findings,
             key=lambda item: (
                 item["case_id"],
-                item["owasp_class"],
+                item["classification"],
                 item["replay_identity"] or "",
                 item["finding_id"] or "",
             ),
@@ -487,6 +569,25 @@ def _summarize(
         "inconclusive_cases": inconclusive_cases,
         "not_tested_cases": not_tested_cases,
     }
+
+
+def _prepare_output_dir(output_dir: Path) -> Path:
+    try:
+        if output_dir.exists():
+            if not output_dir.is_dir():
+                raise SystemExit(f"Output path is not a directory: {output_dir}.")
+            if next(output_dir.iterdir(), None) is not None:
+                raise SystemExit(
+                    f"Output directory is not empty: {output_dir}. Refusing to "
+                    "overwrite evaluation results; choose a new empty directory "
+                    "with --output-dir."
+                )
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        raise SystemExit(
+            f"Cannot prepare output directory {output_dir}: {error}"
+        ) from error
+    return output_dir
 
 
 def main() -> int:
@@ -508,8 +609,11 @@ def main() -> int:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=REPO_ROOT / "docs/evaluation/raw",
-        help="Directory for raw Charon JSON and the exact-count run summary.",
+        default=None,
+        help=(
+            "New empty directory for raw results; if omitted, a fresh temporary "
+            "directory is created. Nonempty directories are refused."
+        ),
     )
     parser.add_argument(
         "--endpoint-policy",
@@ -560,9 +664,11 @@ def main() -> int:
         raise SystemExit("Ground-truth VAmPI revision does not match the clone.")
 
     output_dir = args.output_dir
-    if not output_dir.is_absolute():
+    if output_dir is None:
+        output_dir = Path(tempfile.mkdtemp(prefix="charon-eval-vampi-"))
+    elif not output_dir.is_absolute():
         output_dir = REPO_ROOT / output_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = _prepare_output_dir(output_dir.resolve())
     report_path = output_dir / "charon-report.json"
     summary_path = output_dir / "run-summary.json"
     stderr_path = output_dir / "charon-stderr.log"
@@ -744,7 +850,7 @@ def main() -> int:
         if result.returncode != 0:
             raise RuntimeError(
                 "Charon analyze failed; temporary captures and credentials were "
-                "removed. See docs/evaluation/raw/charon-stderr.log."
+                f"removed. See {stderr_path}."
             )
 
     report = json.loads(report_path.read_text(encoding="utf-8"))

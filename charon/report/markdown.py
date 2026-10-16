@@ -58,13 +58,22 @@ def _field_diff_lines(finding: FindingReport) -> list[str]:
     return lines
 
 
+def _classification_text(classification_scope: str, code: str) -> str:
+    if classification_scope == "internal":
+        return f"{code} (internal Charon heuristic; not an OWASP category)"
+    return f"OWASP API Security Top 10 (2023) {code}"
+
+
 def _finding_section(finding: FindingReport) -> list[str]:
+    classification = _classification_text(
+        finding.classification_scope, finding.classification
+    )
     lines = [
         f"## {finding.title}",
         "",
         f"- **Finding ID:** `{finding.finding_id}`",
         f"- **Rule:** `{finding.rule_id}`",
-        f"- **OWASP:** {finding.owasp_class}",
+        f"- **Classification:** {classification}",
         f"- **Severity:** {finding.severity}",
         f"- **Confidence:** {finding.confidence:.2f}",
         "",
@@ -136,10 +145,14 @@ def _policy_declaration_lines(
         lines.append(f"- **Description:** {declaration.description}")
     if declaration.suppressed_findings:
         lines.append("- **Suppressed findings:**")
-        lines.extend(
-            f"  - `{finding.finding_id}` — `{finding.rule_id}` ({finding.owasp_class})"
-            for finding in declaration.suppressed_findings
-        )
+        for finding in declaration.suppressed_findings:
+            classification = _classification_text(
+                finding.classification_scope, finding.classification
+            )
+            lines.append(
+                f"  - `{finding.finding_id}` — `{finding.rule_id}` "
+                f"({classification})"
+            )
     else:
         lines.append("- **Suppressed findings:** _none_")
     return lines

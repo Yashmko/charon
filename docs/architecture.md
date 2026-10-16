@@ -37,7 +37,7 @@ The codebase splits into a **deterministic core** and an **advisory layer**, sep
 - `replay` — Re-issues requests under varied identities/contexts. Produces `ReplayResult`s. Target nondeterminism is captured and flagged, not hidden.
 - `compare` — Normalizes and diffs responses (status, headers, body, access decision). Emits structured `Comparison` artifacts.
 - `detect` — Authorization rule engine. The sole authority that creates `Finding`s.
-- `policy` — Applies optional caller-declared endpoint policies after detection. Matching findings are suppressed and represented as `policy-declared` report entries; an empty policy config is a no-op.
+- `policy` — Applies optional caller-declared endpoint policies after detection and evidence assembly, before findings are finalized. Matching findings are suppressed and represented as `policy-declared` report entries; an empty policy config is a no-op.
 - `evidence` — Assembles the evidence chain for each finding and computes stable content-addressed IDs.
 - `report` — Renders unsuppressed findings, evidence, and policy declarations. Has a mode switch to include or exclude all `Inferred` content.
 
@@ -48,11 +48,11 @@ The codebase splits into a **deterministic core** and an **advisory layer**, sep
 
 ### Orchestration
 
-- `pipeline` — Wires the stages. Enforces ordering: detection completes and findings are sealed *before* enrichment runs. Owns the LLM-availability decision.
+- `pipeline` — Wires the stages. Enforces ordering: detection and evidence assembly, optional endpoint-policy filtering, reportable-finding finalization, then optional enrichment. Owns the LLM-availability decision.
 
 ## Data flow between modules
 
-The pipeline is a one-directional flow. The finding set is *sealed* at the detect/evidence stage, then optionally enriched.
+The pipeline is a one-directional flow. Detection and evidence assembly produce candidate findings. An optional deterministic endpoint-policy step can suppress findings that match explicit caller declarations. The post-policy finding set is then sealed and may optionally be enriched.
 
 ```
  [ capture ] --> CapturedExchange (immutable, content-addressed)
@@ -64,12 +64,17 @@ The pipeline is a one-directional flow. The finding set is *sealed* at the detec
  [ compare ] ----> Comparison
        |
        v
- [ detect ] -----> Finding (deterministic) --- requires --> Evidence
-       |                                                       ^
-       v                                                       |
- [ evidence ] --- assembles & content-addresses --------------/
+ [ detect ] -----> Candidate Finding (deterministic) --- requires --> Evidence
+       |                                                           ^
+       v                                                           |
+ [ evidence ] --- assembles & content-addresses ------------------/
        |
-   == FINDINGS SEALED HERE (deterministic result is complete) ==
+       v
+ [ optional endpoint policy ] <--- explicit caller declarations
+       |                          matching findings are suppressed
+       |                          and retained as policy audit entries
+       v
+   == REPORTABLE FINDINGS SEALED HERE (after policy) ==
        |
        +----> [ report: deterministic mode ]  (fully usable, no LLM)
        |
@@ -77,16 +82,16 @@ The pipeline is a one-directional flow. The finding set is *sealed* at the detec
  [ enrich (llm) ] --> Annotation (attached by reference, never mutates findings)
        |
        v
-   [ report: enriched mode ]  (deterministic findings + advisory labels)
+   [ report: enriched mode ]  (post-policy findings + advisory labels)
 ```
 
-Data only flows *into* `enrich`; nothing flows *back* from `enrich` into `detect`/`evidence`.
+With no endpoint policy, the policy step is a no-op. Data only flows *into* `enrich`; nothing flows *back* from `enrich` into detection, evidence assembly, or policy matching.
 
 ## Deterministic vs. optionally-LLM modules
 
 | Module | Determinism | Uses LLM |
 |---|---|---|
-| `capture`, `model`, `replay`, `compare`, `detect`, `evidence` | Deterministic | Never |
+| `capture`, `model`, `replay`, `compare`, `detect`, `evidence`, `policy` | Deterministic | Never |
 | `report` (deterministic mode) | Deterministic | Never |
 | `pipeline` | Deterministic control flow; branches on LLM availability | No (only decides) |
 | `llm`, `enrich` | Best-effort | Yes |
@@ -140,9 +145,9 @@ Each module is considered correct for v1 only if it meets these criteria.
 - Attaches annotations by reference only; partial or failed enrichment leaves the finding set intact.
 
 ### `pipeline`
-- Applies optional endpoint policy declarations after deterministic detection and before report assembly.
+- Applies optional endpoint policy declarations after deterministic detection/evidence assembly and before report assembly.
 - Suppressed findings are listed as policy-declared audit entries, not as findings; the empty default preserves existing behavior.
-- Seals the post-policy finding set before any enrichment runs.
+- Seals the post-policy reportable finding set before any enrichment runs.
 - Completes successfully whether or not the LLM is available.
 
 ## Failure modes when the LLM is unavailable

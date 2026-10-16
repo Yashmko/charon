@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "target": {
     "name": "VAmPI",
     "repository": "https://github.com/erev0s/VAmPI",
@@ -10,31 +10,36 @@
   },
   "evaluation_classes": [
     {
-      "owasp_class": "API1",
+      "classification": "API1",
+      "classification_scope": "owasp-api-security-top-10-2023",
       "name": "BOLA",
       "rule_id": "authz.bola.cross-account-object-exposure"
     },
     {
-      "owasp_class": "API3",
+      "classification": "API3",
+      "classification_scope": "owasp-api-security-top-10-2023",
       "name": "BOPLA",
       "rule_id": "authz.bopla.excessive-data-exposure"
     },
     {
-      "owasp_class": "API5",
+      "classification": "API5",
+      "classification_scope": "owasp-api-security-top-10-2023",
       "name": "BFLA",
       "rule_id": "authz.bfla.privilege-transition"
     },
     {
-      "owasp_class": "API7",
-      "name": "Missing authorization signal",
+      "classification": "internal:missing-authorization",
+      "classification_scope": "internal",
+      "legacy_report_code": "API7",
+      "name": "Missing-authorization signal (internal Charon heuristic; not an OWASP category)",
       "rule_id": "authz.missing-authz.no-authorization-header"
     }
   ],
   "counting": {
-    "unit": "one (test case, OWASP class) pair",
-    "positive_rule": "A case is positive only for the class or classes in expected_owasp_classes.",
+    "unit": "one (test case, evaluation class) pair; classes identify their OWASP or internal scope",
+    "positive_rule": "A case is positive for an official OWASP class only when that class is listed in expected_owasp_classes. No source-labeled positive case is assigned to the internal missing-authorization heuristic.",
     "negative_rule": "For each tested vulnerable or not_vulnerable case, every evaluation class not listed in expected_owasp_classes is a negative. A finding of that class on a negative case is a false positive, including a wrong-class finding on a case vulnerable to a different class.",
-    "deduplication": "Multiple findings of the same class for one case (for example, one per replay identity) count once. Inconclusive and not_tested cases are excluded from measured metrics.",
+    "deduplication": "Multiple findings of the same evaluation class for one case (for example, one per replay identity) count once. Inconclusive and not_tested cases are excluded from measured metrics.",
     "ratios": "Precision and recall are exact fractions; a zero denominator is N/A."
   },
   "cases": [
@@ -71,8 +76,8 @@
       "method": "GET",
       "endpoint": "/users/v1",
       "path": "/users/v1",
-      "expected_result": "not_vulnerable",
-      "vulnerability_class": "None; documented public minimal user information (negative control)",
+      "expected_result": "inconclusive",
+      "vulnerability_class": "Public user-list access; intended data scope is unclear",
       "expected_owasp_classes": [],
       "evaluation_status": "tested",
       "baseline_status_code": 200,
@@ -106,7 +111,7 @@
           "label": "Documents the basic-information response"
         }
       ],
-      "label_rationale": "The README explicitly describes an unregistered user viewing minimal information about dummy users, and the list operation is documented as basic user information."
+      "label_rationale": "The README documents public access to minimal information about dummy users, but this runner registers Alice, Bob, and a disposable synthetic account before the unauthenticated list request. At the pinned revision, the list returns every database user, including those newly created accounts and their email addresses. The documentation does not establish that these evaluation-created records are within the intended public-data scope, nor does it classify their exposure as a vulnerability. This case is therefore inconclusive rather than a not_vulnerable negative control."
     },
     {
       "id": "user-profile-policy-unclear",

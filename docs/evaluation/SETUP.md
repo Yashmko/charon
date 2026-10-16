@@ -100,24 +100,29 @@ virtual environment installed above:
 
 ```bash
 cd /path/to/charon
+OUTPUT_DIR="$(mktemp -d /tmp/charon-eval-vampi.XXXXXX)"
 VAMPI_DIR=/tmp/charon-eval-vampi \
   /tmp/charon-eval-env/bin/python docs/evaluation/run_eval.py \
   --base-url http://127.0.0.1:5000 \
   --vampi-dir /tmp/charon-eval-vampi \
-  --output-dir docs/evaluation/raw
+  --output-dir "$OUTPUT_DIR"
 ```
 
-The runner refuses non-loopback URLs and a VAmPI Git revision other than the
-pinned commit. It runs Charon with `--mode deterministic`; there is no LLM
-mode in this run. The output directory receives `charon-report.json` (the raw
-Charon JSON report), `run-summary.json` (case-level predictions and exact
-metrics), and Charon's stdout/stderr logs. Captures and the short-lived bearer
-tokens are kept in a temporary directory and removed after the run; the
-captured debug response contains synthetic plaintext test passwords, so raw
-captures are deliberately not persisted.
+The runner refuses non-loopback URLs, redirects outside the original loopback
+origin, and a VAmPI Git revision other than the pinned commit. It runs Charon
+with `--mode deterministic`; there is no LLM mode in this run. The output
+directory receives `charon-report.json` (the raw Charon JSON report),
+`run-summary.json` (case-level predictions and exact metrics), and Charon's
+stdout/stderr logs. Captures and the short-lived bearer tokens are kept in a
+temporary directory and removed after the run; the captured debug response
+contains synthetic plaintext test passwords, so raw captures are deliberately
+not persisted. The runner refuses any nonempty output directory, including the
+checked-in historical `docs/evaluation/raw`; create a new empty directory for
+every run.
 
 A second invocation repeats the database reset and test-data setup. To rerun,
-use the same commands above while the loopback VAmPI process is running.
+use the same commands above with a newly created output directory while the
+loopback VAmPI process is running.
 
 ## 6. Optional-policy comparison and independent second API
 
@@ -153,15 +158,17 @@ cd /tmp/charon-eval-owasp-api-top10-lab/vulnerable_api
 ```
 
 In another terminal, from the Charon repository root, run the pinned second-API
-case. The runner verifies the source revision and accepts loopback URLs only.
-Choose a fresh output directory for any later rerun.
+case. The runner verifies the source revision, accepts loopback URLs only,
+blocks redirects outside the original loopback origin, and refuses nonempty
+output directories. Choose a fresh output directory for any later rerun.
 
 ```bash
 cd /path/to/charon
+OUTPUT_DIR="$(mktemp -d /tmp/charon-eval-shopapi.XXXXXX)"
 /tmp/charon-eval-env/bin/python docs/evaluation/run_second_api_eval.py \
   --base-url http://127.0.0.1:5001 \
   --target-dir /tmp/charon-eval-owasp-api-top10-lab \
-  --output-dir docs/evaluation/raw/second-api
+  --output-dir "$OUTPUT_DIR"
 ```
 
 Only seeded synthetic users and order data are used. The runner persists a
